@@ -49,32 +49,32 @@ export default function TunnelTopViewCard({ tunnel, tick, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="text-left rounded-xl border border-slate-700/70 bg-slate-900/70 hover:bg-slate-900 transition
-                 hover:ring-2 hover:ring-sky-500/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60 p-4"
+      className="text-left rounded-xl border border-border/70 bg-card hover:bg-card transition
+                 hover:ring-2 hover:ring-sky-500/40 focus:outline-none focus:ring-2 focus:ring-sky-500/60 p-4 focus-brand"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <div className="text-slate-200 font-semibold">Túnel {tunnel.id}</div>
+        <div className="text-on font-semibold">Túnel {tunnel.id}</div>
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="px-2 py-0.5 rounded bg-slate-700/70 text-slate-100">{tunnel.fruta}</span>
+          <span className="px-2 py-0.5 rounded bg-card text-on focus-brand">{tunnel.fruta}</span>
           {typeof tick === "number" && (
-            <span className="px-2 py-0.5 rounded bg-slate-800/70 text-slate-300">tick {tick}</span>
+            <span className="px-2 py-0.5 rounded bg-card text-on focus-brand">tick {tick}</span>
           )}
         </div>
       </div>
 
       {/* Lienzo */}
       <div
-        className="relative rounded-2xl border border-slate-700/70 bg-gradient-to-b from-slate-900 to-slate-950
+        className="relative rounded-2xl border border-border/70 bg-gradient-to-b from-slate-900 to-slate-950
                    shadow-inner overflow-hidden aspect-[4/3] max-h-[240px] mx-auto"
       >
         {/* marco interior */}
-        <div className="absolute inset-2 rounded-xl bg-slate-900/70 border border-slate-800" />
+        <div className="absolute inset-2 rounded-xl bg-card border border-slate-800 focus-brand" />
 
         {/* Barra roja – salida/ventiladores (arriba) */}
         <div className="absolute left-10 right-10 top-4 h-2 rounded-full bg-red-600 shadow-[0_0_12px_rgba(239,68,68,0.6)]" />
         {/* Barra inferior (retorno/entrada) */}
-        <div className="absolute left-16 right-16 bottom-4 h-1.5 rounded-full bg-slate-700/60" />
+        <div className="absolute left-16 right-16 bottom-4 h-1.5 rounded-full bg-card focus-brand" />
 
         {/* AMB OUT (arriba centro) */}
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -86,8 +86,8 @@ export default function TunnelTopViewCard({ tunnel, tick, onClick }: Props) {
         </div>
 
         {/* Columnas guía laterales (sutiles) */}
-        <div className="absolute top-10 bottom-10 left-[18%] w-[2px] bg-slate-700/35" />
-        <div className="absolute top-10 bottom-10 right-[18%] w-[2px] bg-slate-700/35" />
+        <div className="absolute top-10 bottom-10 left-[18%] w-[2px] bg-card focus-brand" />
+        <div className="absolute top-10 bottom-10 right-[18%] w-[2px] bg-card focus-brand" />
 
         {/* 4 sensores (sin central) */}
         {/* Lado IZQUIERDO (entrada) */}

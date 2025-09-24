@@ -16,7 +16,7 @@ export default function AlertModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 p-3">
-      <div className="w-full max-w-lg rounded-2xl bg-slate-900 text-slate-100 shadow-2xl ring-1 ring-white/10">
+      <div className="w-full max-w-lg rounded-2xl bg-card text-on shadow-2xl ring-1 ring-white/10 focus-brand">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <div className="font-semibold text-red-300">⚠️ Alarmas detectadas</div>
           <button onClick={onClose} className="rounded p-1 hover:bg-white/10">
@@ -45,7 +45,7 @@ export default function AlertModal({
               <div className="mt-2 flex gap-2">
                 <button
                   onClick={() => onCloseOne(a.id)}
-                  className="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-sm"
+                  className="rounded-lg bg-card hover:bg-slate-700 px-3 py-1.5 text-sm focus-brand"
                 >
                   Aceptar
                 </button>

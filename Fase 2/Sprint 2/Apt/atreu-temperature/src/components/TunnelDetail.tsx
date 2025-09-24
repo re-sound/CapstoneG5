@@ -69,19 +69,19 @@ export default function TunnelDetail({
             <div className="flex items-center gap-2 text-2xl font-bold">
               {ranges.idealMin}°C – {ranges.idealMax}°C
             </div>
-            <div className="text-xs text-slate-400 mt-1">
+            <div className="text-xs text-on-dim mt-1">
               Alarmas: &lt; {ranges.min}°C o &gt; {ranges.max}°C
             </div>
           </Card>
 
           {/* Selector de fruta + editor de rangos */}
-          <div className="lg:col-span-3 rounded-xl border border-slate-700/60 p-4 bg-slate-900/40">
+          <div className="lg:col-span-3 rounded-xl border border-border p-4 bg-card focus-brand">
             <div className="grid md:grid-cols-2 gap-4">
               <Field label="Especie (fruta)">
                 <select
                   value={fruit}
                   onChange={(e) => handleChangeFruit(e.target.value as Fruit)}
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                  className="w-full rounded border border-border bg-card px-3 py-2 focus-brand"
                 >
                   {frutasDisponibles.map((f) => (
                     <option key={f} value={f}>{f}</option>
@@ -95,7 +95,7 @@ export default function TunnelDetail({
                 <NumberBox label="Ideal hasta" value={ranges.idealMax} onChange={(v) => setRanges((r)=>({...r, idealMax:v}))}/>
               </div>
             </div>
-            <div className="text-xs text-slate-400 mt-2">
+            <div className="text-xs text-on-dim mt-2">
               Al cambiar la fruta se restablecen los rangos por defecto de esa especie.
             </div>
           </div>
@@ -193,7 +193,7 @@ function ProcesosMejorados({
   return (
     <div className="space-y-4">
       {/* barra de estado + acciones rápidas */}
-      <div className="flex flex-wrap items-center gap-2 justify-between rounded-xl border border-slate-700/60 p-3 bg-slate-900/40">
+      <div className="flex flex-wrap items-center gap-2 justify-between rounded-xl border border-border p-3 bg-card focus-brand">
         <div className="text-sm">
           Estado:&nbsp;
           <span className={`px-2 py-0.5 rounded text-xs ${
@@ -206,7 +206,7 @@ function ProcesosMejorados({
         </div>
         <div className="flex flex-wrap gap-2">
           {estado === "libre" && (
-            <button onClick={crearProceso} className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500">Crear</button>
+            <button onClick={crearProceso} className="px-3 py-2 rounded btn-brand">Crear</button>
           )}
           {estado === "en_proceso" && (
             <>
@@ -216,25 +216,25 @@ function ProcesosMejorados({
           )}
           {estado === "pausado" && (
             <>
-              <button onClick={continuar} className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500">Continuar</button>
+              <button onClick={continuar} className="px-3 py-2 rounded btn-brand">Continuar</button>
               <button onClick={finalizar} className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500">Finalizar</button>
             </>
           )}
           {estado === "finalizado" && (
-            <button onClick={() => setEstado("libre")} className="px-3 py-2 rounded bg-slate-700 hover:bg-slate-600">Reiniciar</button>
+            <button onClick={() => setEstado("libre")} className="px-3 py-2 rounded bg-card hover:bg-slate-600 focus-brand">Reiniciar</button>
           )}
         </div>
       </div>
 
       {/* formulario (crear/modificar) */}
-      <div className="rounded-xl border border-slate-700/60 p-4 bg-slate-900/40">
+      <div className="rounded-xl border border-border p-4 bg-card focus-brand">
         <div className="font-semibold mb-3">Datos del Proceso</div>
         <div className="grid md:grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Field label="Fecha inicio">
               <input
                 type="datetime-local"
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                className="w-full rounded border border-border bg-card px-3 py-2 focus-brand"
                 value={form.fechaInicio}
                 onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })}
                 disabled={estado !== "libre"}
@@ -242,7 +242,7 @@ function ProcesosMejorados({
             </Field>
             <Field label="Mediciones">
               <select
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                className="w-full rounded border border-border bg-card px-3 py-2 focus-brand"
                 value={form.frecuencia}
                 onChange={(e) => setForm({ ...form, frecuencia: e.target.value })}
                 disabled={estado === "finalizado"}
@@ -254,7 +254,7 @@ function ProcesosMejorados({
             </Field>
             <Field label="Destino">
               <input
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                className="w-full rounded border border-border bg-card px-3 py-2 focus-brand"
                 value={form.destino}
                 onChange={(e) => setForm({ ...form, destino: e.target.value })}
                 disabled={estado === "finalizado"}
@@ -262,7 +262,7 @@ function ProcesosMejorados({
             </Field>
             <Field label="Operador inicial">
               <input
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                className="w-full rounded border border-border bg-card px-3 py-2 focus-brand"
                 value={form.operador}
                 onChange={(e) => setForm({ ...form, operador: e.target.value })}
                 disabled={estado === "finalizado"}
@@ -270,7 +270,7 @@ function ProcesosMejorados({
             </Field>
             <Field label="Condición inicial">
               <textarea
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 h-20"
+                className="w-full rounded border border-border bg-card px-3 py-2 h-20 focus-brand"
                 value={form.condicion}
                 onChange={(e) => setForm({ ...form, condicion: e.target.value })}
                 disabled={estado === "finalizado"}
@@ -283,7 +283,7 @@ function ProcesosMejorados({
               <select
                 value={frutaActual}
                 onChange={(e) => onChangeFruit(e.target.value as Fruit)}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                className="w-full rounded border border-border bg-card px-3 py-2 focus-brand"
                 disabled={estado === "finalizado"}
               >
                 {frutasDisponibles.map((f) => (
@@ -292,26 +292,26 @@ function ProcesosMejorados({
               </select>
             </Field>
             <Field label="Fecha último cambio">
-              <input disabled className="w-full rounded border border-slate-800 bg-slate-800/60 px-3 py-2" />
+              <input disabled className="w-full rounded border border-slate-800 bg-card px-3 py-2 focus-brand" />
             </Field>
             <Field label="Origen">
               <input
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                className="w-full rounded border border-border bg-card px-3 py-2 focus-brand"
                 value={form.origen}
                 onChange={(e) => setForm({ ...form, origen: e.target.value })}
                 disabled={estado === "finalizado"}
               />
             </Field>
             <Field label="Estado">
-              <input disabled value={estado} className="w-full rounded border border-slate-800 bg-slate-800/60 px-3 py-2" />
+              <input disabled value={estado} className="w-full rounded border border-slate-800 bg-card px-3 py-2 focus-brand" />
             </Field>
 
             <div className="flex gap-2 pt-2">
               {estado === "libre" && (
-                <button onClick={crearProceso} className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500">Iniciar</button>
+                <button onClick={crearProceso} className="px-3 py-2 rounded btn-brand">Iniciar</button>
               )}
               {(estado === "en_proceso" || estado === "pausado") && (
-                <button onClick={modificar} className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500">Guardar cambios</button>
+                <button onClick={modificar} className="px-3 py-2 rounded btn-brand">Guardar cambios</button>
               )}
               {estado !== "finalizado" && estado !== "libre" && (
                 <button onClick={finalizar} className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500">Finalizar</button>
@@ -321,12 +321,12 @@ function ProcesosMejorados({
         </div>
 
         {mensaje && (
-          <div className="mt-3 text-xs px-3 py-2 rounded bg-slate-800 border border-slate-700 text-slate-200 inline-block">
+          <div className="mt-3 text-xs px-3 py-2 rounded bg-card border border-border text-on inline-block focus-brand">
             {mensaje}
           </div>
         )}
 
-        <div className="text-xs text-slate-400 mt-2">
+        <div className="text-xs text-on-dim mt-2">
           Sprint 1.
         </div>
       </div>
@@ -341,10 +341,10 @@ function Historico({ historico, tunnelId }: { historico: any[]; tunnelId: number
   const cols = Object.keys(historico?.[0] ?? {}).filter((k) => k !== "ts");
 
   return (
-    <div ref={areaRef} className="overflow-x-auto rounded-xl border border-slate-700/60 p-3 bg-slate-900/40">
+    <div ref={areaRef} className="overflow-x-auto rounded-xl border border-border p-3 bg-card focus-brand">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left border-b border-slate-700">
+          <tr className="text-left border-b border-border">
             <th className="py-2">Fecha</th>
             {cols.map((k) => <th key={k} className="py-2">{k}</th>)}
           </tr>
@@ -358,7 +358,7 @@ function Historico({ historico, tunnelId }: { historico: any[]; tunnelId: number
           ))}
         </tbody>
       </table>
-      <div className="text-xs text-slate-400 mt-2">Datos simulados — Túnel {tunnelId}</div>
+      <div className="text-xs text-on-dim mt-2">Datos simulados — Túnel {tunnelId}</div>
     </div>
   );
 }
@@ -367,9 +367,9 @@ function Historico({ historico, tunnelId }: { historico: any[]; tunnelId: number
 
 function Card({ title, children, subtitle }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-700/60 p-4 bg-slate-900/40">
-      <div className="text-sm text-slate-300">{title}</div>
-      {subtitle && <div className="text-[11px] text-slate-400">{subtitle}</div>}
+    <div className="rounded-xl border border-border p-4 bg-card focus-brand">
+      <div className="text-sm text-on">{title}</div>
+      {subtitle && <div className="text-[11px] text-on-dim">{subtitle}</div>}
       <div className="mt-2">{children}</div>
     </div>
   );
@@ -380,7 +380,7 @@ function Big({ children }: { children: React.ReactNode }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="text-sm">
-      <div className="mb-1 text-slate-300">{label}</div>
+      <div className="mb-1 text-on">{label}</div>
       {children}
     </label>
   );
@@ -388,20 +388,20 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function NumberBox({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <label className="text-sm">
-      <div className="mb-1 text-slate-300">{label}</div>
+      <div className="mb-1 text-on">{label}</div>
       <input
         type="number"
         step="0.1"
         value={value}
         onChange={(e) => onChange(+e.target.value)}
-        className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+        className="w-full rounded border border-border bg-card px-3 py-2 focus-brand"
       />
     </label>
   );
 }
 function Badge({ value }: { value: number | "OUT" }) {
   return (
-    <span className="inline-block rounded bg-slate-800 text-slate-100 text-xs px-3 py-1">
+    <span className="inline-block rounded bg-card text-on text-xs px-3 py-1 focus-brand">
       {typeof value === "number" ? `${value}°C` : "OUT"}
     </span>
   );

@@ -204,19 +204,19 @@ export default function InteractiveChart({ data, title }: { data: Row[]; title?:
       </div>
 
       <div className="flex items-center gap-2">
-        <button onClick={resetZoom} className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-xs">
+        <button onClick={resetZoom} className="px-3 py-1.5 rounded bg-card hover:bg-slate-600 text-xs focus-brand">
           Reset zoom
         </button>
-        <button onClick={exportPNG} className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-xs">
+        <button onClick={exportPNG} className="px-3 py-1.5 rounded btn-brand text-xs">
           Exportar PNG
         </button>
-        <button onClick={exportPDF} className="px-3 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-xs">
+        <button onClick={exportPDF} className="px-3 py-1.5 rounded btn-brand text-xs">
           Exportar PDF
         </button>
-        <span className="text-xs text-slate-400 ml-auto">Rueda = zoom, arrastra = pan</span>
+        <span className="text-xs text-on-dim ml-auto">Rueda = zoom, arrastra = pan</span>
       </div>
 
-      <div className="rounded-lg border border-slate-700 overflow-hidden">
+      <div className="rounded-lg border border-border overflow-hidden">
         <canvas ref={canvasRef} className="w-full h-[320px] block" />
       </div>
     </div>

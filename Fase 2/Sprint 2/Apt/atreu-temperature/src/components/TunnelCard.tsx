@@ -6,24 +6,24 @@ export default function TunnelCard({ tunnel }: { tunnel: Tunnel }) {
   const { id, fruta, sensores } = tunnel;
 
   return (
-    <div className="border border-slate-700 rounded-xl p-3 bg-slate-900/50 hover:ring-2 hover:ring-sky-500 transition">
+    <div className="border border-border rounded-xl p-3 bg-card hover:ring-2 hover:ring-sky-500 transition focus-brand">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-sm font-semibold">Túnel {id}</h2>
         <div className="flex gap-2 text-[10px]">
-          <span className="px-2 py-0.5 rounded bg-slate-700/60">{fruta}</span>
+          <span className="px-2 py-0.5 rounded bg-card focus-brand">{fruta}</span>
         </div>
       </div>
 
       {/* Contenedor reducido */}
-      <div className="relative w-full h-40 bg-slate-800/40 rounded-lg flex items-center justify-center">
+      <div className="relative w-full h-40 bg-card rounded-lg flex items-center justify-center focus-brand">
         {/* AMB OUT */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] bg-slate-700/80 text-white px-2 py-0.5 rounded">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] bg-card text-white px-2 py-0.5 rounded focus-brand">
           {sensores.AMB_OUT}°C
         </div>
         <div className="absolute top-5 left-[20%] right-[20%] h-1 bg-red-500 rounded-full shadow-lg shadow-red-500/50"></div>
 
         {/* AMB RET */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] bg-slate-700/80 text-white px-2 py-0.5 rounded">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] bg-card text-white px-2 py-0.5 rounded focus-brand">
           {sensores.AMB_RET}°C
         </div>
 

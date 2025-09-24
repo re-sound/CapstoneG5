@@ -27,21 +27,21 @@ export default function TunnelTopView({
   return (
     <div
       onClick={onClick}
-      className="rounded-xl border border-sky-700 bg-slate-900/60 p-3 hover:ring-2 hover:ring-sky-500 transition cursor-pointer"
+      className="rounded-xl border border-sky-700 bg-card p-3 hover:ring-2 hover:ring-sky-500 transition cursor-pointer focus-brand"
     >
       {/* Cabecera */}
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-base font-semibold text-slate-100">{titulo}</h3>
+        <h3 className="text-base font-semibold text-on">{titulo}</h3>
         <div className="flex items-center gap-2 text-xs">
-          <span className="px-2 py-0.5 rounded bg-slate-700/60">{fruta}</span>
-          <span className="px-2 py-0.5 rounded bg-slate-700/60">tick {tick}</span>
+          <span className="px-2 py-0.5 rounded bg-card focus-brand">{fruta}</span>
+          <span className="px-2 py-0.5 rounded bg-card focus-brand">tick {tick}</span>
         </div>
       </div>
 
       {/* Escenario del túnel (compacto y SIN recortes) */}
-      <div className="relative mx-auto bg-slate-800/40 rounded-lg border border-slate-700 w-[300px] h-[200px] overflow-visible">
+      <div className="relative mx-auto bg-card rounded-lg border border-border w-[300px] h-[200px] overflow-visible focus-brand">
         {/* Cámara (marco interior) */}
-        <div className="absolute inset-4 rounded-md border border-slate-700/60"></div>
+        <div className="absolute inset-4 rounded-md border border-border"></div>
 
         {/* Hot air / salida (barra roja arriba) */}
         <div className="absolute top-4 left-10 right-10 h-1 rounded bg-red-500 shadow-[0_0_10px_2px_rgba(239,68,68,0.5)]"></div>
@@ -67,7 +67,7 @@ export default function TunnelTopView({
 function ChipCenter({ y, value }: { y: string; value: number | "OUT" }) {
   return (
     <div
-      className={`absolute left-1/2 -translate-x-1/2 ${y} text-xs px-2 py-0.5 rounded bg-slate-700/80 text-slate-100`}
+      className={`absolute left-1/2 -translate-x-1/2 ${y} text-xs px-2 py-0.5 rounded bg-slate-700/80 text-on`}
     >
       {fmt(value)}
     </div>

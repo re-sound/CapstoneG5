@@ -11,7 +11,7 @@ export default function Tabs({ items, initial = "resumen" }: { items: TabItem[];
   const [active, setActive] = useState(initial);
   return (
     <div>
-      <div className="flex gap-2 border-b border-slate-700">
+      <div className="flex gap-2 border-b border-border">
         {items.map((t) => (
           <button
             key={t.key}
@@ -19,7 +19,7 @@ export default function Tabs({ items, initial = "resumen" }: { items: TabItem[];
             className={`px-3 py-2 text-sm rounded-t-md ${
               active === t.key
                 ? "bg-sky-600 text-white"
-                : "hover:bg-slate-800 text-slate-300"
+                : "hover:bg-card text-on"
             }`}
           >
             {t.label}

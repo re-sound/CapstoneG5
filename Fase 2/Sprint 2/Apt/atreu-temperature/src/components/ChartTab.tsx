@@ -13,7 +13,7 @@ import ReactECharts from "echarts-for-react";
  */
 export default function ChartTab({ historico }: { historico: any[] }) {
   if (!historico || historico.length === 0) {
-    return <div className="text-sm text-slate-400">No hay datos disponibles.</div>;
+    return <div className="text-sm text-on-dim">No hay datos disponibles.</div>;
   }
 
   // Claves numéricas a graficar (excluye 'ts' y valores "OUT")
@@ -92,9 +92,9 @@ export default function ChartTab({ historico }: { historico: any[] }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-2">
+    <div className="rounded-xl border border-border bg-card p-2 focus-brand">
       <ReactECharts option={option} style={{ height: 340, width: "100%" }} notMerge={true} />
-      <div className="text-xs text-slate-400 mt-2">
+      <div className="text-xs text-on-dim mt-2">
         Interactivo: zoom (rueda/drag), pan, leyenda clicable y exportar PNG (icono cámara).
       </div>
     </div>

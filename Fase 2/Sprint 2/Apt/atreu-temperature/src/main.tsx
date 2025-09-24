@@ -1,5 +1,8 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
+// src/main.tsx
+import "./styles/brand.css"; // <- usa el tema de marca
+
 
 // Test de vida: crea un div rojo y luego renderiza la App real
 const el = document.getElementById("root")!;
