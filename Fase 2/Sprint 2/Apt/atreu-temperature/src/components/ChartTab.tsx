@@ -1,169 +1,109 @@
 // src/components/ChartTab.tsx
-import React, { useMemo, useRef } from "react";
+import React from "react";
 import ReactECharts from "echarts-for-react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
-type Punto = {
-  ts: string;
-  AMB_OUT: number | "OUT";
-  AMB_RET: number | "OUT";
-  PULP_1: number | "OUT";
-  PULP_2: number | "OUT";
-  PULP_3: number | "OUT";
-  PULP_4: number | "OUT";
-};
+/**
+ * Gráfico interactivo con ECharts:
+ * - Zoom (rueda/drag), pan
+ * - Leyenda clicable para ocultar/mostrar series
+ * - Tooltips por punto
+ * - Exportar como PNG (toolbox)
+ * - dataZoom (barra deslizante + zoom interno)
+ * Recibe el mismo "historico" que ya usas en TunnelDetail.
+ */
+export default function ChartTab({ historico }: { historico: any[] }) {
+  if (!historico || historico.length === 0) {
+    return <div className="text-sm text-slate-400">No hay datos disponibles.</div>;
+  }
 
-type Rango = { min: number; max: number; idealMin: number; idealMax: number };
+  // Claves numéricas a graficar (excluye 'ts' y valores "OUT")
+  const sample = historico[0] ?? {};
+  const numericKeys = Object.keys(sample)
+    .filter((k) => k !== "ts")
+    .filter((k) => isFiniteNum(sample[k]) || hasSomeNumeric(historico, k));
 
-export default function ChartTab({
-  historico,
-  rango,
-  titulo = "Tiempo real (simulado)",
-}: {
-  historico: Punto[];
-  rango: Rango;
-  titulo?: string;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const { xAxisData, series } = useMemo(() => {
-    const x = historico.map((h) =>
-      new Date(h.ts).toLocaleTimeString([], { hour12: false })
-    );
-
-    const toNum = (v: number | "OUT") => (typeof v === "number" ? v : null);
-
-    const build = (name: string, key: keyof Punto) => ({
-      name,
-      type: "line",
-      showSymbol: false,
-      connectNulls: true,
-      data: historico.map((h) => toNum(h[key])),
-    });
-
-    const seriesArr = [
-      build("Ambiente (salida)", "AMB_OUT"),
-      build("Ambiente (retorno)", "AMB_RET"),
-      build("Pulpa 1", "PULP_1"),
-      build("Pulpa 2", "PULP_2"),
-      build("Pulpa 3", "PULP_3"),
-      build("Pulpa 4", "PULP_4"),
-    ];
-
-    return { xAxisData: x, series: seriesArr };
-  }, [historico]);
-
-  const option = useMemo(
-    () => ({
-      backgroundColor: "transparent",
-      title: { text: titulo, left: "center", textStyle: { color: "#e2e8f0" } },
-      tooltip: { trigger: "axis" },
-      legend: {
-        top: 28,
-        textStyle: { color: "#cbd5e1" },
-      },
-      grid: { left: 40, right: 20, top: 60, bottom: 40 },
-      xAxis: {
-        type: "category",
-        data: xAxisData,
-        axisLine: { lineStyle: { color: "#64748b" } },
-        axisLabel: { color: "#94a3b8" },
-      },
-      yAxis: {
-        type: "value",
-        axisLine: { lineStyle: { color: "#64748b" } },
-        axisLabel: { color: "#94a3b8" },
-        splitLine: { lineStyle: { color: "#334155" } },
-      },
-      dataZoom: [
-        { type: "inside" },
-        { type: "slider", height: 18, bottom: 10 },
-      ],
-      toolbox: {
-        right: 10,
-        feature: {
-          saveAsImage: { title: "PNG" },
-          restore: {},
-          dataZoom: {},
-        },
-        iconStyle: { borderColor: "#94a3b8" },
-      },
-      series,
-      // Banda “ideal”
-      visualMap: [
-        {
-          show: false,
-          pieces: [
-            { gt: rango.idealMin, lt: rango.idealMax, color: "#10b981" }, // verde
-          ],
-          outOfRange: { color: "#60a5fa" }, // azules por fuera del ideal
-        },
-      ],
-      // Alternativa visual con markArea sobre el eje Y:
-      markArea: {
-        silent: true,
-      },
-    }),
-    [xAxisData, series, titulo, rango]
+  // Eje X con timestamps legibles
+  const categories = historico.map((row) =>
+    row.ts ? new Date(row.ts).toLocaleTimeString() : ""
   );
 
-  async function exportPNG() {
-    if (!containerRef.current) return;
-    const canvas = await html2canvas(containerRef.current, {
-      backgroundColor: null,
-      scale: 2,
-    });
-    const link = document.createElement("a");
-    link.download = `tunnel-chart.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  }
+  // Series por clave
+  const palette = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6"];
+  const series = numericKeys.map((k, idx) => ({
+    name: k,
+    type: "line",
+    smooth: true,
+    showSymbol: false,
+    symbolSize: 6,
+    lineStyle: { width: 2 },
+    itemStyle: { color: palette[idx % palette.length] },
+    data: historico.map((row) => (isFiniteNum(row[k]) ? Number(row[k]) : null)),
+    // Conectar gaps: si quieres líneas continuas aunque haya nulls, cambia a true
+    connectNulls: false,
+  }));
 
-  async function exportPDF() {
-    if (!containerRef.current) return;
-    const canvas = await html2canvas(containerRef.current, {
-      backgroundColor: "#0f172a", // para que no salga transparente en PDF
-      scale: 2,
-    });
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: "a4" });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
-    const imgW = canvas.width * ratio;
-    const imgH = canvas.height * ratio;
-    const x = (pageW - imgW) / 2;
-    const y = (pageH - imgH) / 2;
-    pdf.addImage(imgData, "PNG", x, y, imgW, imgH);
-    pdf.save("tunnel-chart.pdf");
-  }
+  const option = {
+    backgroundColor: "transparent",
+    color: palette,
+    grid: { left: 48, right: 24, top: 36, bottom: 48 },
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: "rgba(15,23,42,0.95)",
+      borderColor: "#334155",
+      textStyle: { color: "#e2e8f0" },
+      axisPointer: { type: "line" },
+    },
+    legend: {
+      top: 4,
+      textStyle: { color: "#cbd5e1" },
+    },
+    xAxis: {
+      type: "category",
+      data: categories,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: "#64748b" } },
+      axisLabel: { color: "#94a3b8" },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: "value",
+      axisLine: { lineStyle: { color: "#64748b" } },
+      splitLine: { lineStyle: { color: "#475569", type: "dashed" } },
+      axisLabel: {
+        color: "#94a3b8",
+        formatter: (v: number) => `${v.toFixed(1)}°C`,
+      },
+    },
+    dataZoom: [
+      { type: "inside", throttle: 50 }, // zoom con rueda y gesto
+      { type: "slider", height: 16, bottom: 12 }, // barra deslizante
+    ],
+    toolbox: {
+      right: 8,
+      feature: {
+        dataZoom: { yAxisIndex: "none" },
+        restore: {},
+        saveAsImage: { name: "grafico-tunel" },
+      },
+      iconStyle: { borderColor: "#cbd5e1" },
+      emphasis: { iconStyle: { borderColor: "#ffffff" } },
+    },
+    series,
+  };
 
   return (
-    <div>
-      <div className="flex items-center justify-end gap-2 mb-2">
-        <button onClick={exportPNG} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm">
-          Exportar PNG
-        </button>
-        <button onClick={exportPDF} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm">
-          Exportar PDF
-        </button>
+    <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-2">
+      <ReactECharts option={option} style={{ height: 340, width: "100%" }} notMerge={true} />
+      <div className="text-xs text-slate-400 mt-2">
+        Interactivo: zoom (rueda/drag), pan, leyenda clicable y exportar PNG (icono cámara).
       </div>
-
-      <div
-        ref={containerRef}
-        className="rounded-xl border border-slate-700 bg-slate-800/40 p-2"
-      >
-        <ReactECharts
-          option={option as any}
-          style={{ width: "100%", height: 360 }}
-          notMerge
-          lazyUpdate
-        />
-      </div>
-      <p className="text-xs text-slate-400 mt-2">
-        Tip: usa el control inferior para hacer <b>zoom</b>, o el scroll sobre el gráfico.
-      </p>
     </div>
   );
+}
+
+function isFiniteNum(v: any): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}
+function hasSomeNumeric(rows: any[], key: string) {
+  return rows.some((r) => isFiniteNum(r?.[key]));
 }
