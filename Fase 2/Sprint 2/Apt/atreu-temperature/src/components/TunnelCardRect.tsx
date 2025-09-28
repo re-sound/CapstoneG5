@@ -1,155 +1,128 @@
+// src/components/TunnelCardRect.tsx
 import React from "react";
 import { TUNELES_MOCK } from "../data/tunnelMock";
+import StatusPills from "./StatusPills";
 
 /**
  * Tarjeta “angosta” estilo bosquejo:
  * - Marco exterior (tarjeta)
- * - Panel interior con tubo/ventiladores
+ * - Tubo superior rojo (ventilación)
  * - Ambiente (arriba) / Retorno (debajo)
- * - 4 sensores de entrada + 4 de salida
+ * - 4 sensores de ENTRADA (fila) + separador + 4 sensores de SALIDA (fila)
  *
  * Props:
- *  id: número de túnel
- *  fruta: etiqueta (CEREZA/UVA/CLEMENTINA)
- *  onClick: abrir modal detalle
+ *  id: número de túnel (obligatorio)
+ *  fruta: etiqueta actual (opcional; NO se muestra si el túnel está “Disponible”)
+ *  onClick: callback para abrir modal detalle
  */
 export default function TunnelCardRect({
   id,
-  fruta,
+  fruta, // opcional, lo maneja StatusPills cuando hay proceso
   onClick,
 }: {
   id: number;
-  fruta: string;
+  fruta?: string;
   onClick?: () => void;
 }) {
   const tun = TUNELES_MOCK.find((t) => t.id === id)!;
 
-  // Mapeo rápido de 8 sensores en orden del bosquejo
-  const IZQ_EXT_ENT = tun.sensores.PULP_1; // puedes re-mapear a tu gusto
+  // --- Mapeo 8 sensores (según bosquejo) ---
+  // ENTRADA
+  const IZQ_EXT_ENT = tun.sensores.PULP_1; // puedes re-mapear si luego separan interior/exterior reales
   const IZQ_INT_ENT = tun.sensores.PULP_2;
   const DER_INT_ENT = tun.sensores.PULP_3;
   const DER_EXT_ENT = tun.sensores.PULP_4;
 
-  const IZQ_EXT_SAL = "OUT"; // si no tienes, deja OUT o simula
-  const IZQ_INT_SAL = "OUT";
-  const DER_INT_SAL = "OUT";
-  const DER_EXT_SAL = "OUT";
+  // SALIDA (si no existen en mock, quedan como OUT)
+  const IZQ_EXT_SAL: number | "OUT" = "OUT";
+  const IZQ_INT_SAL: number | "OUT" = "OUT";
+  const DER_INT_SAL: number | "OUT" = "OUT";
+  const DER_EXT_SAL: number | "OUT" = "OUT";
 
   const AMB_OUT = tun.sensores.AMB_OUT;
   const AMB_RET = tun.sensores.AMB_RET;
 
+  // --- Subcomponentes internos simples ---
   const Chip = ({ children }: { children: React.ReactNode }) => (
-    <span className="px-2 py-0.5 text-[11px] rounded-full bg-emerald-700/40 border border-emerald-500/40 text-emerald-100 shadow-inner">
+    <span className="px-1.5 py-[2px] text-[10px] rounded-md bg-slate-800 text-slate-100 border border-slate-600">
       {children}
     </span>
   );
 
-  const Small = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[10px] text-slate-300">{children}</span>
+  const Label = ({ children }: { children: React.ReactNode }) => (
+    <span className="block text-[10px] text-slate-300 leading-tight truncate">{children}</span>
   );
 
   const Val = ({ v }: { v: number | "OUT" }) => (
     <Chip>{typeof v === "number" ? `${v}°C` : "OUT"}</Chip>
   );
 
+  const SensorCell = ({
+    value,
+    label,
+  }: {
+    value: number | "OUT";
+    label: string;
+  }) => (
+    <div className="flex flex-col items-center gap-1 min-w-0">
+      <Val v={value} />
+      <Label>{label}</Label>
+    </div>
+  );
+
   return (
     <button
       onClick={onClick}
-      className="group relative w-full max-w-[520px] mx-auto rounded-2xl border border-[var(--cardBorder)] bg-[var(--cardBg)]/70 hover:bg-[var(--cardBg)] transition-colors text-left"
+      aria-label={`Abrir detalle de Túnel ${id}`}
+      className="
+        group relative w-full max-w-[420px] 2xl:max-w-[440px]
+        rounded-2xl border border-slate-700 bg-slate-900/70 hover:bg-slate-900
+        transition-colors text-left shadow-sm
+      "
     >
-      {/* Encabezado compacto */}
+      {/* Encabezado */}
       <div className="flex items-center justify-between px-3 pt-2">
-        <div className="text-[13px] font-semibold text-slate-200">Túnel {id}</div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] px-2 py-[2px] rounded-full bg-emerald-700/35 border border-emerald-500/30 text-emerald-100">
-            Disponible
-          </span>
-          <span className="text-[10px] px-2 py-[2px] rounded-full bg-sky-700/35 border border-sky-500/30 text-sky-100">
-            {fruta}
-          </span>
-        </div>
+        <div className="text-[13px] font-semibold text-slate-100">Túnel {id}</div>
+        {/* Píldoras de estado (Disponible / En ejecución [fruta] / Pausado / Finalizado) */}
+        <StatusPills tunnelId={id} />
       </div>
 
-      {/* Panel interior (papel del bosquejo) */}
+      {/* Cuerpo */}
       <div className="mt-2 px-3 pb-3">
-        <div className="rounded-xl border border-[var(--panelBorder)] bg-[var(--panelBg)]/70 p-3">
-          {/* Tubo superior */}
+        <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+          {/* Tubo/ventilación superior */}
           <div className="relative">
-            <div className="h-1.5 rounded-full bg-pink-500/70 shadow-[0_0_16px_#e11d48]"></div>
-            {/* Ambiente/Retorno apilados y centrados */}
+            <div className="h-1.5 rounded-full bg-rose-500/80 shadow-[0_0_14px_#f43f5e]" />
+            {/* Ambiente / Retorno centrados (apilados) */}
             <div className="w-full flex flex-col items-center gap-1 -mt-3">
               <div className="flex flex-col items-center">
-                <Small>Ambiente</Small>
-                <span className="text-[10px] px-2 py-[1px] rounded bg-slate-800/70 border border-slate-600 text-slate-100">
-                  {typeof AMB_OUT === "number" ? `${AMB_OUT}°C` : "OUT"}
-                </span>
+                <Label>Ambiente</Label>
+                <Chip>{typeof AMB_OUT === "number" ? `${AMB_OUT}°C` : "OUT"}</Chip>
               </div>
               <div className="flex flex-col items-center">
-                <Small>Retorno</Small>
-                <span className="text-[10px] px-2 py-[1px] rounded bg-slate-800/70 border border-slate-600 text-slate-100">
-                  {typeof AMB_RET === "number" ? `${AMB_RET}°C` : "OUT"}
-                </span>
+                <Label>Retorno</Label>
+                <Chip>{typeof AMB_RET === "number" ? `${AMB_RET}°C` : "OUT"}</Chip>
               </div>
             </div>
           </div>
 
-          {/* Fila de ENTRADA */}
-          <div className="grid grid-cols-4 gap-3 mt-5 text-center">
-            <div>
-              <Val v={IZQ_EXT_ENT} />
-              <div className="mt-1">
-                <Small>EXT. IZQ, ENTRADA</Small>
-              </div>
-            </div>
-            <div>
-              <Val v={IZQ_INT_ENT} />
-              <div className="mt-1">
-                <Small>INT. IZQ, ENTRADA</Small>
-              </div>
-            </div>
-            <div>
-              <Val v={DER_INT_ENT} />
-              <div className="mt-1">
-                <Small>INT. DER, ENTRADA</Small>
-              </div>
-            </div>
-            <div>
-              <Val v={DER_EXT_ENT} />
-              <div className="mt-1">
-                <Small>EXT. DER, ENTRADA</Small>
-              </div>
-            </div>
+          {/* Fila ENTRADA */}
+          <div className="grid grid-cols-4 gap-2 mt-5">
+            <SensorCell value={IZQ_EXT_ENT} label="EXT. IZQ, ENTRADA" />
+            <SensorCell value={IZQ_INT_ENT} label="INT. IZQ, ENTRADA" />
+            <SensorCell value={DER_INT_ENT} label="INT. DER, ENTRADA" />
+            <SensorCell value={DER_EXT_ENT} label="EXT. DER, ENTRADA" />
           </div>
 
           {/* Separador */}
-          <div className="my-3 h-[2px] bg-slate-600/30 rounded-full"></div>
+          <div className="my-3 h-px bg-slate-600/30 rounded-full" />
 
-          {/* Fila de SALIDA */}
-          <div className="grid grid-cols-4 gap-3 text-center">
-            <div>
-              <Val v={IZQ_EXT_SAL as any} />
-              <div className="mt-1">
-                <Small>EXT. IZQ, SALIDA</Small>
-              </div>
-            </div>
-            <div>
-              <Val v={IZQ_INT_SAL as any} />
-              <div className="mt-1">
-                <Small>INT. IZQ, SALIDA</Small>
-              </div>
-            </div>
-            <div>
-              <Val v={DER_INT_SAL as any} />
-              <div className="mt-1">
-                <Small>INT. DER, SALIDA</Small>
-              </div>
-            </div>
-            <div>
-              <Val v={DER_EXT_SAL as any} />
-              <div className="mt-1">
-                <Small>EXT. DER, SALIDA</Small>
-              </div>
-            </div>
+          {/* Fila SALIDA */}
+          <div className="grid grid-cols-4 gap-2">
+            <SensorCell value={IZQ_EXT_SAL} label="EXT. IZQ, SALIDA" />
+            <SensorCell value={IZQ_INT_SAL} label="INT. IZQ, SALIDA" />
+            <SensorCell value={DER_INT_SAL} label="INT. DER, SALIDA" />
+            <SensorCell value={DER_EXT_SAL} label="EXT. DER, SALIDA" />
           </div>
         </div>
       </div>

@@ -1,120 +1,179 @@
 // src/state/processStore.ts
-export type Fruit = "CEREZA" | "UVA" | "CLEMENTINA" | "GENÉRICA";
+// Mini-store sin dependencias para manejar procesos por túnel (Sprint 1)
 
-export type ProcessStatus = "LIBRE" | "EN_CURSO" | "PAUSADO" | "FINALIZADO";
+import { RANGOS_POR_FRUTA } from "../data/tunnelMock";
 
-export type Ranges = { min: number; max: number; idealMin: number; idealMax: number };
+export type Fruit = keyof typeof RANGOS_POR_FRUTA;
+export type Range = { min: number; max: number; idealMin: number; idealMax: number };
+export type ProcessStatus = "idle" | "running" | "paused" | "finished";
+export type MeasurePlan = 15 | 5 | 1;
 
-export type Process = {
+export type TunnelProcess = {
+  tunnelId: number;
+  status: ProcessStatus;
+
+  fruit: Fruit;
+  ranges: Range;
+
+  startedAt?: string;
+  startedBy?: string;
+  measurePlan?: MeasurePlan;
+  destination?: string;
+  conditionInitial?: string;
+  origin?: string;
+  stateLabel?: string;
+
+  lastChangeAt?: string;
+  endedAt?: string;
+  endedBy?: string;
+};
+
+export type HistoryItem = {
   id: string;
   tunnelId: number;
   fruit: Fruit;
-  status: ProcessStatus;
-  createdAt: string;   // ISO
-  startedAt?: string;
-  pausedAt?: string;
-  resumedAt?: string;
-  finishedAt?: string;
-
-  // Campos de formulario
-  operatorStart?: string;
-  operatorEnd?: string;
-  origin?: string;
+  ranges: Range;
+  startedAt: string;
+  endedAt: string;
+  endedBy: string;
+  measurePlan?: MeasurePlan;
   destination?: string;
-  frequency?: "1m" | "5m" | "15m";
-  notes?: string;
-
-  // Rango usado para evaluar alertas durante el proceso
-  ranges: Ranges;
-
-  // Mock de pallets (Sprint 2/3 puedes expandir)
-  pallets?: number[];
+  conditionInitial?: string;
+  origin?: string;
 };
 
-const KEY = "apt.processes.v1";
+type StoreState = {
+  byId: Map<number, TunnelProcess>;
+  history: Map<number, HistoryItem[]>;
+};
 
-function loadAll(): Process[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as Process[];
-  } catch {
-    return [];
-  }
+const state: StoreState = {
+  byId: new Map(),
+  history: new Map(),
+};
+
+// listeners sencillos (sin EventTarget para evitar issues con HMR)
+const listeners = new Set<() => void>();
+function emit() {
+  for (const l of listeners) l();
 }
 
-function saveAll(list: Process[]) {
-  localStorage.setItem(KEY, JSON.stringify(list));
-}
-
-function uid() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-export function getProcessesByTunnel(tunnelId: number): Process[] {
-  return loadAll().filter(p => p.tunnelId === tunnelId).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-}
-
-export function getActiveProcess(tunnelId: number): Process | undefined {
-  return loadAll().find(p => p.tunnelId === tunnelId && (p.status === "EN_CURSO" || p.status === "PAUSADO"));
-}
-
-export function createProcess(input: Omit<Process, "id" | "status" | "createdAt">): Process {
-  const now = new Date().toISOString();
-  const proc: Process = {
-    id: uid(),
-    createdAt: now,
-    status: "EN_CURSO",
-    startedAt: now,
-    ...input,
+function defaultProcess(tunnelId: number): TunnelProcess {
+  const defFruit: Fruit = "GENÉRICA";
+  const def = RANGOS_POR_FRUTA[defFruit];
+  return {
+    tunnelId,
+    status: "idle",
+    fruit: defFruit,
+    ranges: { min: def.min, max: def.max, idealMin: def.idealMin, idealMax: def.idealMax },
+    stateLabel: "Libre",
   };
-  const all = loadAll();
-  // Cierra cualquier proceso activo que hubiese quedado colgado
-  for (const p of all) {
-    if (p.tunnelId === proc.tunnelId && (p.status === "EN_CURSO" || p.status === "PAUSADO")) {
-      p.status = "FINALIZADO";
-      p.finishedAt = now;
-    }
+}
+
+export function getProcess(tunnelId: number): TunnelProcess {
+  const existing = state.byId.get(tunnelId);
+  if (existing) return existing;
+  const tp = defaultProcess(tunnelId);
+  state.byId.set(tunnelId, tp);
+  return tp;
+}
+
+export function startProcess(
+  tunnelId: number,
+  payload: {
+    fruit: Fruit;
+    ranges: Range;
+    startedBy?: string;
+    startedAt?: string;
+    measurePlan?: MeasurePlan;
+    destination?: string;
+    conditionInitial?: string;
+    origin?: string;
   }
-  all.push(proc);
-  saveAll(all);
-  return proc;
+) {
+  const now = new Date().toISOString();
+  state.byId.set(tunnelId, {
+    tunnelId,
+    status: "running",
+    fruit: payload.fruit,
+    ranges: payload.ranges,
+    startedAt: payload.startedAt || now,
+    startedBy: payload.startedBy || "Operador",
+    measurePlan: payload.measurePlan ?? 15,
+    destination: payload.destination ?? "",
+    conditionInitial: payload.conditionInitial ?? "",
+    origin: payload.origin ?? "",
+    stateLabel: "Ocupado",
+    lastChangeAt: now,
+  });
+  emit();
 }
 
-export function pauseProcess(id: string) {
-  const all = loadAll();
-  const p = all.find(x => x.id === id);
-  if (!p || p.status !== "EN_CURSO") return;
-  p.status = "PAUSADO";
-  p.pausedAt = new Date().toISOString();
-  saveAll(all);
+export function updateRanges(tunnelId: number, ranges: Range) {
+  const p = getProcess(tunnelId);
+  state.byId.set(tunnelId, { ...p, ranges, lastChangeAt: new Date().toISOString() });
+  emit();
 }
 
-export function resumeProcess(id: string) {
-  const all = loadAll();
-  const p = all.find(x => x.id === id);
-  if (!p || p.status !== "PAUSADO") return;
-  p.status = "EN_CURSO";
-  p.resumedAt = new Date().toISOString();
-  saveAll(all);
+export function updateProcessInfo(
+  tunnelId: number,
+  patch: Partial<Omit<TunnelProcess, "tunnelId" | "status">>
+) {
+  const p = getProcess(tunnelId);
+  state.byId.set(tunnelId, { ...p, ...patch, lastChangeAt: new Date().toISOString() });
+  emit();
 }
 
-export function modifyProcess(id: string, patch: Partial<Pick<Process,
-  "origin" | "destination" | "notes" | "frequency" | "ranges"
->>) {
-  const all = loadAll();
-  const p = all.find(x => x.id === id);
-  if (!p || (p.status !== "EN_CURSO" && p.status !== "PAUSADO")) return;
-  Object.assign(p, patch);
-  saveAll(all);
+export function pauseProcess(tunnelId: number) {
+  const p = getProcess(tunnelId);
+  if (p.status !== "running") return;
+  state.byId.set(tunnelId, { ...p, status: "paused", lastChangeAt: new Date().toISOString() });
+  emit();
 }
 
-export function finishProcess(id: string, operatorEnd?: string) {
-  const all = loadAll();
-  const p = all.find(x => x.id === id);
-  if (!p || (p.status !== "EN_CURSO" && p.status !== "PAUSADO")) return;
-  p.status = "FINALIZADO";
-  p.finishedAt = new Date().toISOString();
-  if (operatorEnd) p.operatorEnd = operatorEnd;
-  saveAll(all);
+export function resumeProcess(tunnelId: number) {
+  const p = getProcess(tunnelId);
+  if (p.status !== "paused") return;
+  state.byId.set(tunnelId, { ...p, status: "running", lastChangeAt: new Date().toISOString() });
+  emit();
+}
+
+export function finalizeProcess(tunnelId: number, endedBy: string) {
+  const p = getProcess(tunnelId);
+  const endedAt = new Date().toISOString();
+
+  // guardar snapshot en historial
+  const item: HistoryItem = {
+    id: `${tunnelId}-${endedAt}`,
+    tunnelId,
+    fruit: p.fruit,
+    ranges: p.ranges,
+    startedAt: p.startedAt || endedAt,
+    endedAt,
+    endedBy,
+    measurePlan: p.measurePlan,
+    destination: p.destination,
+    conditionInitial: p.conditionInitial,
+    origin: p.origin,
+  };
+  const list = state.history.get(tunnelId) ?? [];
+  list.unshift(item);
+  state.history.set(tunnelId, list);
+
+  // volver a estado “Disponible”
+  state.byId.set(tunnelId, { ...defaultProcess(tunnelId), lastChangeAt: endedAt });
+  emit();
+}
+
+export function getHistory(tunnelId: number): HistoryItem[] {
+  return state.history.get(tunnelId) ?? [];
+}
+export function clearHistory(tunnelId: number) {
+  state.history.set(tunnelId, []);
+  emit();
+}
+
+export function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
