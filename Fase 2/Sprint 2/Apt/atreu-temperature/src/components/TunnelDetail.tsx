@@ -6,7 +6,6 @@ import ChartTab from "./ChartTab";
 import {
   TUNELES_MOCK,
   RANGOS_POR_FRUTA,
-  getHistorico,
 } from "../data/tunnelMock";
 import {
   Fruit,
@@ -21,9 +20,11 @@ import {
   resumeProcess,
   finalizeProcess,
 } from "../state/processStore";
+import { apiGetHistory, HistoryRow } from "../api/client";
+import { usePolling } from "../hooks/usePolling";
 
 /* ----------------------------------------------------------------
-   Historial de procesos (simple) — localStorage por túnel
+   Historial de procesos  — localStorage por túnel
 ------------------------------------------------------------------*/
 type HistoryItem = {
   id: string;
@@ -57,10 +58,20 @@ export default function TunnelDetail({
   tunnelId,
   open,
   onClose,
+  frutaActual,
+  frutasDisponibles,
+  onChangeFruit,
+  rangeOverride,
+  onChangeRanges,
 }: {
   tunnelId: number;
   open: boolean;
   onClose: () => void;
+  frutaActual: Fruit;
+  frutasDisponibles: Fruit[];
+  onChangeFruit: (f: Fruit) => void;
+  rangeOverride?: Range;
+  onChangeRanges: (r: Range) => void;
 }) {
   const tun = TUNELES_MOCK.find((t) => t.id === tunnelId)!;
   const process = useSyncExternalStore(
@@ -68,11 +79,18 @@ export default function TunnelDetail({
     () => getProcess(tunnelId),
     () => getProcess(tunnelId)
   );
-  const historico = useMemo(() => getHistorico(tunnelId, 60), [tunnelId]);
+
+  // Histórico con auto-refresh (cada 20s)
+  const { data: historico = [], loading: histLoading, error: histError } =
+    usePolling<HistoryRow[]>(() => apiGetHistory(tunnelId, 60), 20_000, []);
 
   const tabs: TabItem[] = [
-    { key: "temperaturas", label: "Temperaturas", content: <ResumenTemperaturas tunnelId={tunnelId} /> },
-    { key: "grafico", label: "Gráfico", content: <ChartTab historico={historico} /> },
+    { key: "temperaturas", label: "Temperaturas", content: <ResumenTemperaturas tunnelId={tunnelId} historico={historico} /> },
+    { key: "grafico", label: "Gráfico", content: histLoading
+        ? <div className="text-slate-400 text-sm p-2">Cargando…</div>
+        : histError
+          ? <div className="text-rose-400 text-sm p-2">Error: {histError.message}</div>
+          : <ChartTab historico={historico} /> },
     { key: "procesos", label: "Procesos", content: <ProcesosPane tunnelId={tunnelId} /> },
     { key: "historico", label: "Histórico", content: <HistoricoTable historico={historico} tunnelId={tunnelId} /> },
   ];
@@ -85,14 +103,10 @@ export default function TunnelDetail({
 }
 
 /* ----------------------------------------------------------------
-   Temperaturas (resumen)
+   Temperaturas (resumen) — usa el último registro del histórico real
 ------------------------------------------------------------------*/
-/* ---------- Temperaturas (resumen) con rangos del proceso ---------- */
 
-function ResumenTemperaturas({ tunnelId }: { tunnelId: number }) {
-  const tun = TUNELES_MOCK.find((t) => t.id === tunnelId)!;
-
-  // Traemos el proceso para usar sus rangos actuales
+function ResumenTemperaturas({ tunnelId, historico }: { tunnelId: number; historico: HistoryRow[] }) {
   const process = useSyncExternalStore(
     subscribe,
     () => getProcess(tunnelId),
@@ -100,10 +114,20 @@ function ResumenTemperaturas({ tunnelId }: { tunnelId: number }) {
   );
   const ranges = process.ranges;
 
-  // Helpers de estado
-  const nums = Object.values(tun.sensores).filter((v) => typeof v === "number") as number[];
-  const min = Math.min(...nums);
-  const max = Math.max(...nums);
+  // Última muestra del backend (fallback a mock si aún no llega)
+  const last = historico.length ? historico[historico.length - 1] : null;
+  const sensores = last ? {
+    AMB_OUT: last.AMB_OUT,
+    AMB_RET: last.AMB_RET,
+    PULP_1: last.PULP_1,
+    PULP_2: last.PULP_2,
+    PULP_3: last.PULP_3,
+    PULP_4: last.PULP_4,
+  } : TUNELES_MOCK.find(t => t.id === tunnelId)!.sensores;
+
+  const nums = Object.values(sensores).filter((v) => typeof v === "number") as number[];
+  const min = nums.length ? Math.min(...nums) : NaN;
+  const max = nums.length ? Math.max(...nums) : NaN;
 
   const SensorBadge = ({ value, label }: { value: number | "OUT"; label?: string }) => {
     const status = classifyTemp(value, ranges);
@@ -119,14 +143,14 @@ function ResumenTemperaturas({ tunnelId }: { tunnelId: number }) {
   return (
     <div className="grid lg:grid-cols-3 gap-4">
       <Card title="Temp. mínima actual">
-        <div className={`inline-block rounded px-3 py-1 text-white ${chipBg(classifyTemp(min, ranges))}`}>
-          <Big>{min.toFixed(1)}°C</Big>
+        <div className={`inline-block rounded px-3 py-1 text-white ${chipBg(classifyTemp(min as any, ranges))}`}>
+          <Big>{isFinite(min) ? `${min.toFixed(1)}°C` : "—"}</Big>
         </div>
       </Card>
 
       <Card title="Temp. máxima actual">
-        <div className={`inline-block rounded px-3 py-1 text-white ${chipBg(classifyTemp(max, ranges))}`}>
-          <Big>{max.toFixed(1)}°C</Big>
+        <div className={`inline-block rounded px-3 py-1 text-white ${chipBg(classifyTemp(max as any, ranges))}`}>
+          <Big>{isFinite(max) ? `${max.toFixed(1)}°C` : "—"}</Big>
         </div>
       </Card>
 
@@ -140,24 +164,24 @@ function ResumenTemperaturas({ tunnelId }: { tunnelId: number }) {
       </Card>
 
       <Card title="Ambiente (Salida)" subtitle="EXTERIOR">
-        <SensorBadge value={tun.sensores.AMB_OUT} />
+        <SensorBadge value={sensores.AMB_OUT} />
       </Card>
 
       <Card title="Retorno" subtitle="EXTERIOR">
-        <SensorBadge value={tun.sensores.AMB_RET} />
+        <SensorBadge value={sensores.AMB_RET} />
       </Card>
 
       <Card title="Interior — Entrada">
         <div className="flex gap-2 flex-wrap">
-          <SensorBadge value={tun.sensores.PULP_2} label="IZQ INT ENT" />
-          <SensorBadge value={tun.sensores.PULP_1} label="DER INT ENT" />
+          <SensorBadge value={sensores.PULP_2} label="IZQ INT ENT" />
+          <SensorBadge value={sensores.PULP_1} label="DER INT ENT" />
         </div>
       </Card>
 
       <Card title="Exterior — Entrada">
         <div className="flex gap-2 flex-wrap">
-          <SensorBadge value={tun.sensores.PULP_3} label="IZQ EXT ENT" />
-          <SensorBadge value={tun.sensores.PULP_4} label="DER EXT ENT" />
+          <SensorBadge value={sensores.PULP_3} label="IZQ EXT ENT" />
+          <SensorBadge value={sensores.PULP_4} label="DER EXT ENT" />
         </div>
       </Card>
     </div>
@@ -168,11 +192,11 @@ function ResumenTemperaturas({ tunnelId }: { tunnelId: number }) {
 
 // Devuelve: "OUT" | "ALARM_BAJA" | "ALARM_ALTA" | "OK" | "FUERA_IDEAL"
 function classifyTemp(v: number | "OUT", r: Range) {
-  if (v === "OUT") return "OUT" as const;
+  if (v === "OUT" || Number.isNaN(v)) return "OUT" as const;
   if (v < r.min) return "ALARM_BAJA" as const;
   if (v > r.max) return "ALARM_ALTA" as const;
   if (v >= r.idealMin && v <= r.idealMax) return "OK" as const;
-  return "FUERA_IDEAL" as const; // dentro de límites pero fuera del ideal
+  return "FUERA_IDEAL" as const;
 }
 
 // Mapea estado → clases Tailwind
@@ -190,7 +214,6 @@ function chipBg(status: ReturnType<typeof classifyTemp>) {
       return "bg-amber-600";
   }
 }
-
 
 /* ----------------------------------------------------------------
    Procesos — iniciar/pausar/continuar/guardar/finalizar + historial
@@ -436,7 +459,6 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                     alert("Ingresa quién finaliza el proceso.");
                     return;
                   }
-                  // 1) snapshot inmediato al historial
                   const endedAtNow = new Date().toISOString();
                   pushHistory(tunnelId, {
                     id: `${tunnelId}-${endedAtNow}`,
@@ -446,9 +468,10 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                     ranges: process.ranges,
                     endedBy: endedBy.trim(),
                   });
-                  setHistory(loadHistory(tunnelId));
-                  // 2) finalizar en el store
+                  // Finaliza en el store
                   finalizeProcess(tunnelId, endedBy.trim());
+                  // refresca vista
+                  setHistory(loadHistory(tunnelId));
                   setEndedBy("");
                 }}
                 className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500"
@@ -502,7 +525,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 /* ----------------------------------------------------------------
    Histórico de mediciones (tabla + export PDF)
 ------------------------------------------------------------------*/
-function HistoricoTable({ historico, tunnelId }: { historico: any[]; tunnelId: number }) {
+function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunnelId: number }) {
   const areaRef = useRef<HTMLDivElement>(null);
 
   async function exportPDF() {
@@ -560,7 +583,7 @@ function HistoricoTable({ historico, tunnelId }: { historico: any[]; tunnelId: n
           </tbody>
         </table>
       </div>
-      <div className="text-xs text-slate-400 mt-2">(* Datos simulados, Sprint 1)</div>
+      <div className="text-xs text-slate-400 mt-2">(* Datos desde API ─ refresco automático)</div>
     </div>
   );
 }
@@ -608,14 +631,6 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
       <div className="text-[11px] text-slate-400">{label}</div>
       <div className="text-slate-200 break-words">{children}</div>
     </div>
-  );
-}
-function Badge({ value, label }: { value: number | "OUT"; label?: string }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded bg-slate-800 text-slate-100 text-xs px-3 py-1">
-      {label && <span className="text-[10px] text-slate-300">{label}</span>}
-      <span>{typeof value === "number" ? `${value}°C` : "OUT"}</span>
-    </span>
   );
 }
 function fmt(v: number | "OUT") { return v === "OUT" ? "OUT" : `${v}°C`; }

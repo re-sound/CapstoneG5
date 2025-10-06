@@ -1,46 +1,85 @@
-import { useEffect, useMemo, useState } from "react";
-import type {Tunnel, Reading} from "../types";
+// src/hooks/useAlerts.ts
+import { useMemo } from "react";
 import { RANGES } from "../config/ranges";
-import { evalStatus } from "../utils/eval";
+import { evalStatus, Range, Status } from "../utils/eval";
+import { getProcess } from "../state/processStore";
+
+export type SensorsShort = {
+  AMB_OUT?: number | "OUT";
+  AMB_RET?: number | "OUT";
+  PULP_1?: number | "OUT";
+  PULP_2?: number | "OUT";
+  PULP_3?: number | "OUT";
+  PULP_4?: number | "OUT";
+};
+
+export type TunnelLive = {
+  id: number;
+  fruit: string;
+  sensors: SensorsShort | null;
+};
 
 export interface AlertItem {
   id: string;
   tunnel: number;
   fruit: string;
-  sensor: string;
+  sensor: string; // nombre legible (IZQ_INT_ENT, etc.)
   value: number | "OUT";
-  status: "alarm" | "warn";
+  status: Exclude<Status, "ok" | "out">;
 }
 
-export default function useAlerts(tunnels: Tunnel[]) {
-  const [tick, setTick] = useState(0);
+// 🔄 Mapeo de etiquetas humanizadas
+const SENSOR_LABELS: Record<string, string> = {
+  AMB_OUT: "AMB_OUT",
+  AMB_RET: "AMB_RET",
+  PULP_1: "DER_INT_ENT",
+  PULP_2: "IZQ_INT_ENT",
+  PULP_3: "IZQ_EXT_ENT",
+  PULP_4: "DER_EXT_ENT",
+};
 
-  // “simula” refresco
-  useEffect(()=>{
-    const t = setInterval(()=>setTick(t=>t+1), 4000);
-    return ()=>clearInterval(t);
-  },[]);
-
-  const alerts = useMemo<AlertItem[]>(()=> {
+export default function useAlerts(tunnels: TunnelLive[]) {
+  const alerts = useMemo<AlertItem[]>(() => {
     const list: AlertItem[] = [];
-    tunnels.forEach(t=>{
-      const range = RANGES[t.fruit] ?? RANGES.GENÉRICA;
-      t.readings.forEach((r: Reading) => {
-        const st = evalStatus(r.value, range);
+
+    tunnels.forEach((t) => {
+      const sensors = t.sensors;
+      if (!sensors) return;
+
+      const proc = safeGetProcess(t.id);
+      const range: Range =
+        proc?.ranges ??
+        RANGES[t.fruit] ??
+        RANGES["GENÉRICA"];
+
+      const entries = Object.entries(sensors) as [keyof SensorsShort, number | "OUT"][];
+      entries.forEach(([key, value]) => {
+        const st = evalStatus(value, range);
         if (st === "alarm" || st === "warn") {
+          const label = SENSOR_LABELS[key] ?? key;
           list.push({
-            id: `T${t.id}-${r.kind}`,
+            id: `T${t.id}-${key}`,
             tunnel: t.id,
             fruit: t.fruit,
-            sensor: r.kind,
-            value: r.value,
+            sensor: label, // 👈 usamos el nombre legible
+            value,
             status: st,
           });
         }
       });
     });
+
     return list;
-  }, [tunnels, tick]);
+  }, [tunnels]);
 
   return alerts;
+}
+
+function safeGetProcess(tunnelId: number): { ranges?: Range } | null {
+  try {
+    const p = getProcess(tunnelId);
+    return p ?? null;
+  } catch {
+    return null;
+  }
 }

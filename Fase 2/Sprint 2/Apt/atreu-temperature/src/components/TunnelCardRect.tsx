@@ -3,6 +3,15 @@ import React from "react";
 import { TUNELES_MOCK } from "../data/tunnelMock";
 import StatusPills from "./StatusPills";
 
+export type SensorsShort = {
+  AMB_OUT: number | "OUT";
+  AMB_RET: number | "OUT";
+  PULP_1: number | "OUT";
+  PULP_2: number | "OUT";
+  PULP_3: number | "OUT";
+  PULP_4: number | "OUT";
+};
+
 /**
  * Tarjeta “angosta” estilo bosquejo:
  * - Marco exterior (tarjeta)
@@ -13,34 +22,39 @@ import StatusPills from "./StatusPills";
  * Props:
  *  id: número de túnel (obligatorio)
  *  fruta: etiqueta actual (opcional; NO se muestra si el túnel está “Disponible”)
+ *  sensores: lecturas actuales; si no viene => fallback a mock
  *  onClick: callback para abrir modal detalle
  */
 export default function TunnelCardRect({
   id,
-  fruta, // opcional, lo maneja StatusPills cuando hay proceso
+  fruta,
+  sensores,   // 
   onClick,
 }: {
   id: number;
   fruta?: string;
+  sensores?: SensorsShort | null;
   onClick?: () => void;
 }) {
-  const tun = TUNELES_MOCK.find((t) => t.id === id)!;
+  // Fallback: mock solo si no se entregan sensores por props
+  const mock = TUNELES_MOCK.find((t) => t.id === id)!;
+  const data = sensores ?? mock.sensores;
 
   // --- Mapeo 8 sensores (según bosquejo) ---
-  // ENTRADA
-  const IZQ_EXT_ENT = tun.sensores.PULP_1; // puedes re-mapear si luego separan interior/exterior reales
-  const IZQ_INT_ENT = tun.sensores.PULP_2;
-  const DER_INT_ENT = tun.sensores.PULP_3;
-  const DER_EXT_ENT = tun.sensores.PULP_4;
+  // ENTRADA 
+  const IZQ_EXT_ENT = data.PULP_1; // 
+  const IZQ_INT_ENT = data.PULP_2;
+  const DER_INT_ENT = data.PULP_3;
+  const DER_EXT_ENT = data.PULP_4;
 
-  // SALIDA (si no existen en mock, quedan como OUT)
+  // SALIDA (no vienen en /api/tunnels → OUT)
   const IZQ_EXT_SAL: number | "OUT" = "OUT";
   const IZQ_INT_SAL: number | "OUT" = "OUT";
   const DER_INT_SAL: number | "OUT" = "OUT";
   const DER_EXT_SAL: number | "OUT" = "OUT";
 
-  const AMB_OUT = tun.sensores.AMB_OUT;
-  const AMB_RET = tun.sensores.AMB_RET;
+  const AMB_OUT = data.AMB_OUT;
+  const AMB_RET = data.AMB_RET;
 
   // --- Subcomponentes internos simples ---
   const Chip = ({ children }: { children: React.ReactNode }) => (
@@ -83,7 +97,6 @@ export default function TunnelCardRect({
       {/* Encabezado */}
       <div className="flex items-center justify-between px-3 pt-2">
         <div className="text-[13px] font-semibold text-slate-100">Túnel {id}</div>
-        {/* Píldoras de estado (Disponible / En ejecución [fruta] / Pausado / Finalizado) */}
         <StatusPills tunnelId={id} />
       </div>
 

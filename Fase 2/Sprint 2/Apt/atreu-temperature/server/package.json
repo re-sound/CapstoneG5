@@ -1,0 +1,23 @@
+{
+    "name": "atreu-temperature-server",
+    "private": true,
+    "type": "module",
+    "scripts": {
+      "dev:api": "tsx src/index.ts",
+      "dev:sim": "tsx src/sim.ts",
+      "dev": "npm-run-all -p dev:api dev:sim",
+      "start": "node --enable-source-maps dist/index.js",
+      "build": "tsc -p tsconfig.json"
+    },
+    "dependencies": {
+      "better-sqlite3": "^9.6.0",
+      "cors": "^2.8.5",
+      "express": "^4.21.2"
+    },
+    "devDependencies": {
+      "tsx": "^4.20.6",
+      "typescript": "^5.9.3",
+      "npm-run-all": "^4.1.5"
+    }
+  }
+  
