@@ -1,7 +1,6 @@
 // src/hooks/useAlerts.ts
 import { useMemo } from "react";
-import { RANGES } from "../config/ranges";
-import { evalStatus, Range, Status } from "../utils/eval";
+import { evalStatus, type Range, type Status } from "../utils/eval";
 import { getProcess } from "../state/processStore";
 
 export type SensorsShort = {
@@ -47,10 +46,13 @@ export default function useAlerts(tunnels: TunnelLive[]) {
       if (!sensors) return;
 
       const proc = safeGetProcess(t.id);
-      const range: Range =
-        proc?.ranges ??
-        RANGES[t.fruit] ??
-        RANGES["GENÉRICA"];
+      
+      // 🔥 SOLO generar alarmas si hay un proceso activo
+      if (!proc || !proc.ranges) {
+        return; // No hay proceso activo, no generar alarmas
+      }
+
+      const range: Range = proc.ranges;
 
       const entries = Object.entries(sensors) as [keyof SensorsShort, number | "OUT"][];
       entries.forEach(([key, value]) => {
@@ -78,7 +80,7 @@ export default function useAlerts(tunnels: TunnelLive[]) {
 function safeGetProcess(tunnelId: number): { ranges?: Range } | null {
   try {
     const p = getProcess(tunnelId);
-    return p ?? null;
+    return p;
   } catch {
     return null;
   }

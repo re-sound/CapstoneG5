@@ -33,7 +33,7 @@ export function useProcessSync(intervalMs = 5000) {
       // Si el proceso del backend está activo (running/paused)
       if (proc.status === "running" || proc.status === "paused") {
         // Actualizar el store local con los datos del backend
-        if (localProc.status === "idle" || localProc.status === "finished") {
+        if (!localProc || localProc.status === "idle" || localProc.status === "finished") {
           // El proceso se inició en el backend, iniciarlo en el frontend
           processStore.startProcess(proc.tunnel_id, {
             fruit: proc.fruit as processStore.Fruit,
@@ -68,7 +68,7 @@ export function useProcessSync(intervalMs = 5000) {
             processStore.resumeProcess(proc.tunnel_id);
           }
         }
-      } else if (proc.status === "idle" && localProc.status !== "idle") {
+      } else if (proc.status === "idle" && localProc && localProc.status !== "idle") {
         // El proceso se finalizó en el backend, finalizarlo en el frontend
         processStore.finalizeProcess(proc.tunnel_id, proc.ended_by || "Sistema");
       }

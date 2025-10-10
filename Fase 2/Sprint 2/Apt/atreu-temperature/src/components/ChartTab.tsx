@@ -1,5 +1,5 @@
 // src/components/ChartTab.tsx
-import React from "react";
+import { useRef } from "react";
 import ReactECharts from "echarts-for-react";
 
 /**
@@ -7,14 +7,26 @@ import ReactECharts from "echarts-for-react";
  * - Zoom, pan, leyenda clicable, tooltips
  * - Exportar PNG (toolbox)
  * - dataZoom (inside + slider)
+ * - Controles de rango de tiempo y reseteo
  *
  * NOTA: Se fuerza el uso de nombres legibles para sensores:
  * AMB_OUT, AMB_RET, IZQ_EXT_ENT, IZQ_INT_ENT, DER_INT_ENT, DER_EXT_ENT
  * Si el histórico no trae esas claves, se mapean desde PULP_1..4.
  */
-export default function ChartTab({ historico }: { historico: any[] }) {
+export default function ChartTab({ 
+  historico
+}: { 
+  historico: any[];
+}) {
+  const chartRef = useRef<any>(null);
+
+
   if (!historico || historico.length === 0) {
-    return <div className="text-sm text-on-dim">No hay datos disponibles.</div>;
+    return (
+      <div className="text-sm text-slate-400 p-4 text-center">
+        No hay datos disponibles. Espera a que el simulador inserte lecturas (~40s).
+      </div>
+    );
   }
 
   // Orden y nombres definitivos que queremos mostrar
@@ -28,14 +40,6 @@ export default function ChartTab({ historico }: { historico: any[] }) {
   ] as const;
 
   type TargetKey = (typeof TARGET_KEYS)[number];
-
-  // Mapeo desde PULP_* → alias legible
-  const FALLBACK_FROM_PULP: Record<string, TargetKey> = {
-    PULP_1: "DER_INT_ENT",
-    PULP_2: "IZQ_INT_ENT",
-    PULP_3: "IZQ_EXT_ENT",
-    PULP_4: "DER_EXT_ENT",
-  };
 
   // Construimos una vista normalizada por fila con las 6 claves objetivo
   // Tomamos primero la clave alias si existe; si no, probamos con su PULP equivalente.
@@ -135,14 +139,23 @@ export default function ChartTab({ historico }: { historico: any[] }) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-2 focus-brand">
-      <ReactECharts option={option} style={{ height: 340, width: "100%" }} notMerge={true} />
-      <div className="text-xs text-on-dim mt-2">
-        Interactivo: zoom (rueda/drag), pan, leyenda clicable y exportar PNG (icono cámara).
+    <div className="space-y-3">
+      {/* Gráfico */}
+      <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-2">
+        <ReactECharts 
+          ref={chartRef}
+          option={option} 
+          style={{ height: 400, width: "100%" }} 
+          notMerge={true}
+        />
+        <div className="text-xs text-slate-400 mt-2 px-2">
+          💡 Interactivo: zoom (rueda/drag), pan, clic en leyenda para ocultar sensores, exportar PNG (📷).
+        </div>
       </div>
     </div>
   );
 }
+
 
 function isFiniteNum(v: any): v is number {
   return typeof v === "number" && Number.isFinite(v);
