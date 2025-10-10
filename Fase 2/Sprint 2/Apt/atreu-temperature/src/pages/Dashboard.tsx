@@ -1,9 +1,13 @@
 // src/pages/Dashboard.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import TunnelCardRect from "../components/TunnelCardRect";
 import TunnelDetail from "../components/TunnelDetail";
 import useNewAlarms from "../hooks/useNewAlarms";
 import AlarmCenter from "../components/AlarmCenter";
+import { usePolling } from "../hooks/usePolling";
+import { useProcessSync } from "../hooks/useProcessSync";
+import { apiGetTunnels, type TunnelDto } from "../api/client";
+import type { Fruit } from "../types";
 
 const pageVars =
   "[@supports(color:oklab(0%_0_0))]:[color-scheme:dark] " +
@@ -11,61 +15,52 @@ const pageVars =
   "[--panelBg:#0b1316] [--panelBorder:#203229] " +
   "[--accent:#6db33f] [--accent2:#2bb673]";
 
-type Fruit = "CEREZA" | "UVA" | "CLEMENTINA" | "GENÉRICA";
-
-// Tipo base simulado
-type TunnelSim = {
+// Tipo adaptado para el Dashboard
+type TunnelData = {
   id: number;
   fruit: Fruit;
   sensors: {
-    AMB_OUT: number;
-    AMB_RET: number;
-    PULP_1: number;
-    PULP_2: number;
-    PULP_3: number;
-    PULP_4: number;
+    AMB_OUT: number | "OUT";
+    AMB_RET: number | "OUT";
+    PULP_1: number | "OUT";
+    PULP_2: number | "OUT";
+    PULP_3: number | "OUT";
+    PULP_4: number | "OUT";
   };
 };
 
-// --- función auxiliar para generar temperaturas ---
-function generateSensorTemp(tick: number, base = 4.3) {
-  // normalmente entre 4–5°C
-  let value = base + Math.random() * 1;
-  // cada 3 ticks, mete una lectura anómala
-  if (tick % 3 === 0 && Math.random() < 0.4) {
-    value = 15 + Math.random() * 2; // pico alto 15–17°C
-  }
-  return +value.toFixed(1);
-}
-
 export default function Dashboard() {
   const [selected, setSelected] = useState<number | null>(null);
-  const [tick, setTick] = useState(0);
 
-  // simulador cada 5 segundos
-  useEffect(() => {
-    const t = setInterval(() => setTick((x) => x + 1), 5000);
-    return () => clearInterval(t);
-  }, []);
+  // 🔌 Sincronización de procesos con el backend
+  useProcessSync(5000); // Sincroniza procesos cada 5 segundos
 
-  // 🔌 genera túneles simulados (como si vinieran del backend)
-  const tunnels = useMemo<TunnelSim[]>(() => {
-    const fruits: Fruit[] = ["CEREZA", "UVA", "CLEMENTINA", "GENÉRICA"];
-    return Array.from({ length: 8 }, (_, i) => ({
-      id: i + 1,
-      fruit: fruits[i % fruits.length],
-      sensors: {
-        AMB_OUT: generateSensorTemp(tick),
-        AMB_RET: generateSensorTemp(tick),
-        PULP_1: generateSensorTemp(tick),
-        PULP_2: generateSensorTemp(tick),
-        PULP_3: generateSensorTemp(tick),
-        PULP_4: generateSensorTemp(tick),
+  // 🔌 Polling de túneles desde el backend cada 5 segundos
+  const { data: tunnelsData, error, loading } = usePolling<TunnelDto[]>(
+    apiGetTunnels,
+    5000, // 5 segundos
+    []
+  );
+
+  // Transformar datos del API al formato esperado por los componentes
+  const tunnels = useMemo<TunnelData[]>(() => {
+    if (!tunnelsData || tunnelsData.length === 0) return [];
+    
+    return tunnelsData.map((t) => ({
+      id: t.id,
+      fruit: t.fruit as Fruit,
+      sensors: t.sensors || {
+        AMB_OUT: "OUT",
+        AMB_RET: "OUT",
+        PULP_1: "OUT",
+        PULP_2: "OUT",
+        PULP_3: "OUT",
+        PULP_4: "OUT",
       },
     }));
-  }, [tick]);
+  }, [tunnelsData]);
 
-  // Hook de alarmas (Tuneles Simulados)
+  // Hook de alarmas (datos reales del backend)
   const alarmsInput = useMemo(
     () =>
       tunnels.map((t) => ({
@@ -77,20 +72,34 @@ export default function Dashboard() {
   );
   const { alerts, newAlarms, dismiss, clearAll } = useNewAlarms(alarmsInput);
 
-  // Cámaras decorativas (también simuladas)
-  const cameras = useMemo(
-    () =>
-      Array.from({ length: 8 }, (_, i) => ({
-        id: i + 1,
-        temp: generateSensorTemp(tick),
-      })),
-    [tick]
+  // Obtener la fruta del túnel seleccionado
+  const selectedTunnel = useMemo(
+    () => tunnels.find((t) => t.id === selected),
+    [tunnels, selected]
   );
 
-  const tickRef = useRef(0);
-  useEffect(() => {
-    tickRef.current = tick;
-  }, [tick]);
+  // Cámaras simuladas (generadas a partir de los túneles)
+  const cameras = useMemo(() => {
+    // Generar temperaturas aleatorias para 8 cámaras basándose en los datos actuales
+    return Array.from({ length: 8 }, (_, i) => {
+      // Usar datos de túneles si existen, sino generar valor aleatorio
+      const baseTunnel = tunnels[i % tunnels.length];
+      let temp = 4.5; // temperatura por defecto
+      
+      if (baseTunnel && baseTunnel.sensors.AMB_OUT !== "OUT") {
+        // Usar temperatura ambiente del túnel como base
+        temp = baseTunnel.sensors.AMB_OUT + (Math.random() - 0.5) * 0.8;
+      } else {
+        // Generar temperatura aleatoria entre 4-5°C
+        temp = 4 + Math.random() * 1;
+      }
+      
+      return {
+        id: i + 1,
+        temp: +temp.toFixed(1),
+      };
+    });
+  }, [tunnels]);
 
   return (
     <div className={`${pageVars} min-h-screen bg-[var(--bg)] text-slate-100`}>
@@ -99,24 +108,41 @@ export default function Dashboard() {
 
       <div className="mx-auto w-full max-w-[1920px] px-5 py-6">
         <h1 className="text-4xl font-extrabold tracking-tight mb-6">
-          Temperaturas — Simulación de Prueba
+          Temperaturas — Datos en Tiempo Real
         </h1>
         <div className="mb-2 text-sm text-slate-400">
-          Tick #{tick} • {alerts.length} alertas totales
+          {loading && tunnels.length === 0 ? "Cargando..." : `${tunnels.length} túneles activos`} • {alerts.length} alertas totales
+          {error && <span className="ml-2 text-red-400">• Error de conexión</span>}
         </div>
 
+        {/* Mensaje de error */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200">
+            <strong>Error:</strong> No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose en http://localhost:4000
+          </div>
+        )}
+
+        {/* Estado de carga inicial */}
+        {loading && tunnels.length === 0 && !error && (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-slate-400">Cargando datos del servidor...</div>
+          </div>
+        )}
+
         {/* Grid de túneles */}
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {tunnels.map((t) => (
-            <TunnelCardRect
-              key={t.id}
-              id={t.id}
-              fruta={t.fruit}
-              sensores={t.sensors}
-              onClick={() => setSelected(t.id)}
-            />
-          ))}
-        </div>
+        {tunnels.length > 0 && (
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {tunnels.map((t) => (
+              <TunnelCardRect
+                key={t.id}
+                id={t.id}
+                fruta={t.fruit}
+                sensores={t.sensors}
+                onClick={() => setSelected(t.id)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Cámaras */}
         <section className="mt-8">
@@ -138,12 +164,12 @@ export default function Dashboard() {
       </div>
 
       {/* Modal detalle */}
-      {selected && (
+      {selected && selectedTunnel && (
         <TunnelDetail
           tunnelId={selected}
           open={true}
           onClose={() => setSelected(null)}
-          frutaActual={"CEREZA" as Fruit}
+          frutaActual={selectedTunnel.fruit}
           frutasDisponibles={["CEREZA", "UVA", "CLEMENTINA", "GENÉRICA"]}
           onChangeFruit={() => {}}
           rangeOverride={{ min: 3.5, max: 12, idealMin: 4, idealMax: 9 }}

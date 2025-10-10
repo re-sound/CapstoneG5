@@ -43,6 +43,47 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_readings_tunnel_ts
     ON readings (tunnel_id, ts DESC);
+
+  -- Tabla de procesos activos en cada túnel
+  CREATE TABLE IF NOT EXISTS processes (
+    tunnel_id     INTEGER PRIMARY KEY,
+    status        TEXT NOT NULL CHECK(status IN ('idle', 'running', 'paused', 'finished')),
+    fruit         TEXT NOT NULL,
+    min_temp      REAL NOT NULL,
+    max_temp      REAL NOT NULL,
+    ideal_min     REAL NOT NULL,
+    ideal_max     REAL NOT NULL,
+    started_at    TEXT,
+    started_by    TEXT,
+    ended_at      TEXT,
+    ended_by      TEXT,
+    measure_plan  INTEGER,
+    destination   TEXT,
+    origin        TEXT,
+    condition_initial TEXT,
+    state_label   TEXT,
+    last_change   TEXT,
+    FOREIGN KEY (tunnel_id) REFERENCES tunnels(id) ON DELETE CASCADE
+  );
+
+  -- Historial de procesos finalizados
+  CREATE TABLE IF NOT EXISTS process_history (
+    id            TEXT PRIMARY KEY,
+    tunnel_id     INTEGER NOT NULL,
+    fruit         TEXT NOT NULL,
+    min_temp      REAL NOT NULL,
+    max_temp      REAL NOT NULL,
+    ideal_min     REAL NOT NULL,
+    ideal_max     REAL NOT NULL,
+    started_at    TEXT NOT NULL,
+    ended_at      TEXT NOT NULL,
+    ended_by      TEXT NOT NULL,
+    measure_plan  INTEGER,
+    destination   TEXT,
+    origin        TEXT,
+    condition_initial TEXT,
+    FOREIGN KEY (tunnel_id) REFERENCES tunnels(id) ON DELETE CASCADE
+  );
 `);
 
 // --- Seed de túneles (1..7) ---
