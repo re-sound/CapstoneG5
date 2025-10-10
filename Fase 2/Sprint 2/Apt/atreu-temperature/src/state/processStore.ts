@@ -70,12 +70,10 @@ function defaultProcess(tunnelId: number): TunnelProcess {
   };
 }
 
-export function getProcess(tunnelId: number): TunnelProcess {
+export function getProcess(tunnelId: number): TunnelProcess | null {
   const existing = state.byId.get(tunnelId);
   if (existing) return existing;
-  const tp = defaultProcess(tunnelId);
-  state.byId.set(tunnelId, tp);
-  return tp;
+  return null; // No hay proceso activo
 }
 
 export function startProcess(

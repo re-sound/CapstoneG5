@@ -1,16 +1,17 @@
 // src/components/TunnelDetail.tsx
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import Modal from "./Modal";
-import Tabs, { TabItem } from "./Tabs";
+import Tabs, { type TabItem } from "./Tabs";
 import ChartTab from "./ChartTab";
 import {
   TUNELES_MOCK,
   RANGOS_POR_FRUTA,
 } from "../data/tunnelMock";
 import {
-  Fruit,
-  Range,
-  MeasurePlan,
+  type Fruit,
+  type Range,
+  type MeasurePlan,
+  type TunnelProcess,
   getProcess,
   subscribe,
   startProcess,
@@ -20,8 +21,25 @@ import {
   resumeProcess,
   finalizeProcess,
 } from "../state/processStore";
-import { apiGetHistory, HistoryRow } from "../api/client";
-import { usePolling } from "../hooks/usePolling";
+import { type HistoryRow } from "../api/client";
+import { useHistoryData } from "../hooks/useHistoryData";
+
+/* ----------------------------------------------------------------
+   Objetos por defecto estables para evitar bucles infinitos
+------------------------------------------------------------------*/
+const defaultProcessCache = new Map<number, TunnelProcess>();
+
+const getDefaultProcess = (tunnelId: number): TunnelProcess => {
+  if (!defaultProcessCache.has(tunnelId)) {
+    defaultProcessCache.set(tunnelId, {
+      tunnelId, 
+      status: "idle" as const, 
+      fruit: "GENÉRICA" as const, 
+      ranges: { min: 0, max: 10, idealMin: 2, idealMax: 8 } 
+    });
+  }
+  return defaultProcessCache.get(tunnelId)!;
+};
 
 /* ----------------------------------------------------------------
    Historial de procesos  — localStorage por túnel
@@ -74,15 +92,16 @@ export default function TunnelDetail({
   onChangeRanges: (r: Range) => void;
 }) {
   const tun = TUNELES_MOCK.find((t) => t.id === tunnelId)!;
+  
   const process = useSyncExternalStore(
     subscribe,
-    () => getProcess(tunnelId),
-    () => getProcess(tunnelId)
-  );
+    () => getProcess(tunnelId) || getDefaultProcess(tunnelId),
+    () => getProcess(tunnelId) || getDefaultProcess(tunnelId)
+  ) as TunnelProcess; // Aserción de tipo para evitar null
 
-  // Histórico con auto-refresh (cada 20s)
+  // Histórico con auto-refresh (cada 20s) - todos los datos históricos
   const { data: historico = [], loading: histLoading, error: histError } =
-    usePolling<HistoryRow[]>(() => apiGetHistory(tunnelId, 60), 20_000, []);
+    useHistoryData(tunnelId, 240, 20_000); // 4 horas de datos
 
   const tabs: TabItem[] = [
     { key: "temperaturas", label: "Temperaturas", content: <ResumenTemperaturas tunnelId={tunnelId} historico={historico} /> },
@@ -109,9 +128,9 @@ export default function TunnelDetail({
 function ResumenTemperaturas({ tunnelId, historico }: { tunnelId: number; historico: HistoryRow[] }) {
   const process = useSyncExternalStore(
     subscribe,
-    () => getProcess(tunnelId),
-    () => getProcess(tunnelId)
-  );
+    () => getProcess(tunnelId) || getDefaultProcess(tunnelId),
+    () => getProcess(tunnelId) || getDefaultProcess(tunnelId)
+  ) as TunnelProcess; // Aserción de tipo para evitar null
   const ranges = process.ranges;
 
   // Última muestra del backend (fallback a mock si aún no llega)
@@ -221,9 +240,9 @@ function chipBg(status: ReturnType<typeof classifyTemp>) {
 function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   const process = useSyncExternalStore(
     subscribe,
-    () => getProcess(tunnelId),
-    () => getProcess(tunnelId)
-  );
+    () => getProcess(tunnelId) || getDefaultProcess(tunnelId),
+    () => getProcess(tunnelId) || getDefaultProcess(tunnelId)
+  ) as TunnelProcess; // Aserción de tipo para evitar null
 
   // formularios
   const [fruit, setFruit] = useState<Fruit>(process.fruit);

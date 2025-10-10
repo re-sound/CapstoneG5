@@ -10,10 +10,18 @@ function pill(kind: ProcessStatus) {
 }
 
 export default function StatusPills({ tunnelId }: { tunnelId: number }) {
+  // Crear un objeto por defecto estable
+  const defaultProcess = { 
+    tunnelId, 
+    status: "idle" as const, 
+    fruit: "GENÉRICA" as const, 
+    ranges: { min: 0, max: 10, idealMin: 2, idealMax: 8 } 
+  };
+  
   const process = useSyncExternalStore(
     subscribe,
-    () => getProcess(tunnelId),
-    () => getProcess(tunnelId)
+    () => getProcess(tunnelId) || defaultProcess,
+    () => getProcess(tunnelId) || defaultProcess
   );
 
   if (process.status === "idle") {
