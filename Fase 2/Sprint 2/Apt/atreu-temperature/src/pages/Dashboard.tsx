@@ -9,11 +9,7 @@ import { useProcessSync } from "../hooks/useProcessSync";
 import { apiGetTunnels, type TunnelDto } from "../api/client";
 import type { Fruit } from "../types";
 
-const pageVars =
-  "[@supports(color:oklab(0%_0_0))]:[color-scheme:dark] " +
-  "[--bg:#0c1114] [--cardBg:#0f1518] [--cardBorder:#1e2a22] " +
-  "[--panelBg:#0b1316] [--panelBorder:#203229] " +
-  "[--accent:#6db33f] [--accent2:#2bb673]";
+// Variables CSS unificadas - ahora se usan desde index.css
 
 // Tipo adaptado para el Dashboard
 type TunnelData = {
@@ -102,15 +98,15 @@ export default function Dashboard() {
   }, [tunnels]);
 
   return (
-    <div className={`${pageVars} min-h-screen bg-[var(--bg)] text-slate-100`}>
+    <div className="min-h-screen app-bg">
       {/* Panel flotante de alarmas */}
       <AlarmCenter newAlarms={newAlarms} onDismiss={dismiss} onClearAll={clearAll} />
 
       <div className="mx-auto w-full max-w-[1920px] px-5 py-6">
-        <h1 className="text-4xl font-extrabold tracking-tight mb-6">
+        <h1 className="text-4xl font-extrabold tracking-tight mb-6 text-white">
           Temperaturas
         </h1>
-        <div className="mb-2 text-sm text-slate-400">
+        <div className="mb-2 text-sm text-green-200">
           {loading && tunnels.length === 0 ? "Cargando..." : `${tunnels.length} túneles activos`} • {alerts.length} alertas totales
           {error && <span className="ml-2 text-red-400">• Error de conexión</span>}
         </div>
@@ -131,7 +127,7 @@ export default function Dashboard() {
 
         {/* Grid de túneles */}
         {tunnels.length > 0 && (
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {tunnels.map((t) => (
               <TunnelCardRect
                 key={t.id}
@@ -146,15 +142,15 @@ export default function Dashboard() {
 
         {/* Cámaras */}
         <section className="mt-8">
-          <h2 className="text-xl font-semibold mb-3">Cámaras</h2>
+          <h2 className="text-xl font-semibold mb-3 text-white">Cámaras</h2>
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
             {cameras.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between rounded-xl border border-[var(--cardBorder)] bg-[var(--cardBg)]/80 px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-3 hover:bg-slate-900 transition-colors"
               >
-                <span className="text-sm text-slate-200">Cámara {c.id}</span>
-                <span className="text-[12px] px-2 py-1 rounded-full bg-emerald-800/40 border border-emerald-600/40 text-emerald-100">
+                <span className="text-sm text-green-200">Cámara {c.id}</span>
+                <span className="text-[12px] px-2 py-1 rounded-full bg-green-800/40 border border-green-600/40 text-green-100">
                   {c.temp}°C
                 </span>
               </div>

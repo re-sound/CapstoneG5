@@ -27,7 +27,6 @@ export type SensorsShort = {
  */
 export default function TunnelCardRect({
   id,
-  fruta,
   sensores,   // 
   onClick,
 }: {
@@ -58,13 +57,13 @@ export default function TunnelCardRect({
 
   // --- Subcomponentes internos simples ---
   const Chip = ({ children }: { children: React.ReactNode }) => (
-    <span className="px-1.5 py-[2px] text-[10px] rounded-md bg-slate-800 text-slate-100 border border-slate-600">
+    <span className="px-1.5 py-[2px] text-[10px] rounded-md bg-slate-800 text-green-100 border border-slate-600">
       {children}
     </span>
   );
 
   const Label = ({ children }: { children: React.ReactNode }) => (
-    <span className="block text-[10px] text-slate-300 leading-tight truncate">{children}</span>
+    <span className="block text-[9px] text-green-200 leading-tight text-center whitespace-nowrap overflow-hidden">{children}</span>
   );
 
   const Val = ({ v }: { v: number | "OUT" }) => (
@@ -78,31 +77,34 @@ export default function TunnelCardRect({
     value: number | "OUT";
     label: string;
   }) => (
-    <div className="flex flex-col items-center gap-1 min-w-0">
+    <div className="flex flex-col items-center gap-1 min-w-0 px-1">
       <Val v={value} />
       <Label>{label}</Label>
     </div>
   );
 
   return (
-    <button
-      onClick={onClick}
-      aria-label={`Abrir detalle de Túnel ${id}`}
-      className="
-        group relative w-full max-w-[420px] 2xl:max-w-[440px]
-        rounded-2xl border border-slate-700 bg-slate-900/70 hover:bg-slate-900
-        transition-colors text-left shadow-sm
-      "
-    >
-      {/* Encabezado */}
-      <div className="flex items-center justify-between px-3 pt-2">
-        <div className="text-[13px] font-semibold text-slate-100">Túnel {id}</div>
+    <div className="w-full">
+      {/* Nombre del túnel fuera del cuadro */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm font-semibold text-white">Túnel {id}</div>
         <StatusPills tunnelId={id} />
       </div>
 
-      {/* Cuerpo */}
-      <div className="mt-2 px-3 pb-3">
-        <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+      {/* Cuadro del túnel */}
+      <button
+        onClick={onClick}
+        aria-label={`Abrir detalle de Túnel ${id}`}
+        className="
+          group relative w-full h-fit
+          rounded-2xl border border-slate-700 bg-slate-900/70 hover:bg-slate-900
+          transition-all duration-200 text-left shadow-sm hover:shadow-md
+          hover:scale-[1.02] hover:border-slate-600
+        "
+      >
+        {/* Cuerpo */}
+        <div className="px-4 py-3">
+          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
           {/* Tubo/ventilación superior */}
           <div className="relative">
             <div className="h-1.5 rounded-full bg-rose-500/80 shadow-[0_0_14px_#f43f5e]" />
@@ -120,25 +122,26 @@ export default function TunnelCardRect({
           </div>
 
           {/* Fila ENTRADA */}
-          <div className="grid grid-cols-4 gap-2 mt-5">
-            <SensorCell value={IZQ_EXT_ENT} label="EXT. IZQ, ENTRADA" />
-            <SensorCell value={IZQ_INT_ENT} label="INT. IZQ, ENTRADA" />
-            <SensorCell value={DER_INT_ENT} label="INT. DER, ENTRADA" />
-            <SensorCell value={DER_EXT_ENT} label="EXT. DER, ENTRADA" />
+          <div className="grid grid-cols-4 gap-1 mt-5">
+            <SensorCell value={IZQ_EXT_ENT} label="EXT. IZQ" />
+            <SensorCell value={IZQ_INT_ENT} label="INT. IZQ" />
+            <SensorCell value={DER_INT_ENT} label="INT. DER" />
+            <SensorCell value={DER_EXT_ENT} label="EXT. DER" />
           </div>
 
           {/* Separador */}
           <div className="my-3 h-px bg-slate-600/30 rounded-full" />
 
           {/* Fila SALIDA */}
-          <div className="grid grid-cols-4 gap-2">
-            <SensorCell value={IZQ_EXT_SAL} label="EXT. IZQ, SALIDA" />
-            <SensorCell value={IZQ_INT_SAL} label="INT. IZQ, SALIDA" />
-            <SensorCell value={DER_INT_SAL} label="INT. DER, SALIDA" />
-            <SensorCell value={DER_EXT_SAL} label="EXT. DER, SALIDA" />
+          <div className="grid grid-cols-4 gap-1">
+            <SensorCell value={IZQ_EXT_SAL} label="EXT. IZQ" />
+            <SensorCell value={IZQ_INT_SAL} label="INT. IZQ" />
+            <SensorCell value={DER_INT_SAL} label="INT. DER" />
+            <SensorCell value={DER_EXT_SAL} label="EXT. DER" />
           </div>
         </div>
       </div>
-    </button>
+      </button>
+    </div>
   );
 }

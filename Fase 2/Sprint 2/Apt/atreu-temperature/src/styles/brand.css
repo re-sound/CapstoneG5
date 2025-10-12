@@ -1,149 +1,178 @@
 /* src/styles/brand.css
-   Paleta y utilidades visuales inspiradas en https://lahornilla.cl/
-   — fondo oscuro neutro + acentos verde La Hornilla
+   Componentes específicos de La Hornilla
+   — Utiliza las variables CSS del sistema unificado en index.css
 */
 
+/* ====== COMPONENTES ESPECÍFICOS ====== */
 
-/* ====== Paleta ====== */
-:root {
-  /* Marca (verde La Hornilla) */
-  --brand-50:  #eef7df;
-  --brand-100: #d9efbc;
-  --brand-200: #bfe487;
-  --brand-300: #a7d956;
-  --brand-400: #8fc72f;
-  --brand-500: #74b414;
-  --brand-600: #5ea310; /* mejor contraste en UI */
-  --brand-700: #4a850c;
-  --brand-800: #3a690a;
-  --brand-900: #2c5107;
-
-  /* Neutros (fondo y panel) — oscuros, limpios */
-  --bg:        #0c1114;   /* fondo app */
-  --bg-2:      #0f1518;   /* fondo áreas */
-  --card:      #10171a;   /* panel */
-  --card-2:    #0f181a;   /* panel 2 */
-  --border:    #24333a;   /* borde sutil */
-
-  /* Texto */
-  --on:        #e9f2ee;   /* texto principal */
-  --on-dim:    #a8b7b0;   /* texto tenue */
-
-  /* Estados chips */
-  --ok:        #1ea672;
-  --warn:      #c9a300;
-  --alarm:     #e23d3d;
-}
-
-/* ====== Helpers tailwind-like ====== */
-.bg-brand     { background-color: var(--brand-600); }
-.text-brand   { color: var(--brand-600); }
-
-.bg-bg        { background-color: var(--bg); }
-.bg-card      { background-color: var(--card); }
-.border-border{ border-color: var(--border); }
-
-.text-on      { color: var(--on); }
-.text-on-dim  { color: var(--on-dim); }
-
-/* Fondo general con degradé sutil */
-.app-bg {
-  background:
-    radial-gradient(1200px 800px at 20% -10%, rgba(116,180,20,0.08), transparent 60%),
-    radial-gradient(900px 700px  at 85%  0%, rgba(116,180,20,0.06), transparent 60%),
-    var(--bg);
-}
-
-/* Tarjeta moderna */
+/* ====== COMPONENTES DE TARJETAS ====== */
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%) , var(--card);
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%), var(--bg-card);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.02) inset,
     0 8px 24px rgba(0,0,0,0.35);
-  color: var(--on);
+  color: var(--text-primary);
 }
 
-/* Botón primario con marca */
+.card-elevated {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 30%), var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.03) inset,
+    0 12px 32px rgba(0,0,0,0.4);
+}
+
+/* ====== BOTONES DE MARCA ====== */
 .btn-brand {
   background: linear-gradient(180deg, var(--brand-600), var(--brand-700));
   color: #fff;
   border-radius: 10px;
-  padding: .5rem .9rem;
+  padding: 0.5rem 1rem;
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow:
-    0 6px 14px rgba(116,180,20,0.28),
+    0 6px 14px rgba(94, 163, 16, 0.28),
     0 0 0 1px rgba(255,255,255,0.02) inset;
-  transition: transform .08s ease, box-shadow .2s ease, filter .15s ease;
+  transition: transform 0.08s ease, box-shadow 0.2s ease, filter 0.15s ease;
+  font-weight: 500;
 }
+
 .btn-brand:hover {
   filter: brightness(1.03);
   box-shadow:
-    0 10px 28px rgba(116,180,20,0.36),
+    0 10px 28px rgba(94, 163, 16, 0.36),
     0 0 0 1px rgba(255,255,255,0.04) inset;
 }
-.btn-brand:active { transform: translateY(1px); }
 
-/* Badges (pills) */
+.btn-brand:active { 
+  transform: translateY(1px); 
+}
+
+.btn-secondary {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-card);
+  border-color: var(--border-medium);
+}
+
+/* ====== BADGES Y PILLS ====== */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: .35rem;
+  gap: 0.35rem;
   height: 28px;
-  padding: 0 .7rem;
-  font-size: .75rem;
+  padding: 0 0.7rem;
+  font-size: 0.75rem;
   line-height: 1;
   border-radius: 999px;
-  color: var(--on);
+  color: var(--text-primary);
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
 }
+
 .badge-brand {
-  background: rgba(116,180,20,0.16);
+  background: rgba(94, 163, 16, 0.16);
   color: #eafdcd;
-  border: 1px solid rgba(116,180,20,0.35);
+  border: 1px solid rgba(94, 163, 16, 0.35);
 }
 
-/* Focus accesible */
-.focus-brand:focus {
-  outline: 2px solid color-mix(in srgb, var(--brand-500) 75%, white);
-  outline-offset: 2px;
+.badge-success {
+  background: rgba(30, 166, 114, 0.16);
+  color: #bdf6e6;
+  border: 1px solid rgba(30, 166, 114, 0.35);
 }
 
-/* Línea “calefactor” con glow */
+.badge-warning {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fef3c7;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.badge-error {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* ====== FONDO DE APLICACIÓN ====== */
+.app-bg {
+  background:
+    radial-gradient(1200px 800px at 20% -10%, rgba(94, 163, 16, 0.08), transparent 60%),
+    radial-gradient(900px 700px at 85% 0%, rgba(94, 163, 16, 0.06), transparent 60%),
+    var(--bg-primary);
+}
+
+/* ====== TOPBAR ====== */
+.topbar {
+  background: var(--brand-600);
+  color: #fff;
+  box-shadow: var(--shadow-brand);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ====== INPUTS Y FORMULARIOS ====== */
+.input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(94, 163, 16, 0.1);
+}
+
+.select { 
+  composes: input; 
+}
+
+.textarea { 
+  composes: input; 
+  min-height: 5rem; 
+  resize: vertical;
+}
+
+/* ====== ELEMENTOS ESPECIALES ====== */
 .neon-heater {
   height: 6px;
   border-radius: 8px;
   background:
     linear-gradient(90deg, rgba(255,255,255,0.2), rgba(255,255,255,0.65), rgba(255,255,255,0.2)),
-    linear-gradient(90deg, #f75555, #fca5a5 30%, #f75555 70%);
+    linear-gradient(90deg, #ef4444, #fca5a5 30%, #ef4444 70%);
   box-shadow:
-    0 0 14px rgba(247,85,85,.55),
-    0 0 30px rgba(247,85,85,.25),
+    0 0 14px rgba(239, 68, 68, 0.55),
+    0 0 30px rgba(239, 68, 68, 0.25),
     0 1px 0 rgba(255,255,255,0.12) inset;
 }
 
-/* Chips de estado (si los usas) */
-.chip-ok    { background: rgba(30,166,114,0.18); color:#bdf6e6; border:1px solid rgba(30,166,114,0.42); }
-.chip-warn  { background: rgba(201,163,0,0.18);  color:#fff3bf; border:1px solid rgba(201,163,0,0.42); }
-.chip-alarm { background: rgba(226,61,61,0.18);  color:#ffd4d4; border:1px solid rgba(226,61,61,0.42); }
-
-/* Inputs “de marca” */
-.input {
-  background: var(--card-2);
-  border: 1px solid var(--border);
-  color: var(--on);
-  border-radius: 10px;
-  padding: .55rem .75rem;
+/* ====== FOCUS ACCESIBLE ====== */
+.focus-brand:focus {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
 }
-.select { composes: input; }
-.textarea { composes: input; min-height: 5rem; }
 
-/* Top bar */
-.topbar {
-  background: var(--brand-600);
-  color: #fff;
-  box-shadow: 0 8px 22px rgba(116,180,20,.25);
+/* ====== UTILIDADES DE ESPACIADO ====== */
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.space-y-6 > * + * {
+  margin-top: 1.5rem;
+}
+
+.space-y-8 > * + * {
+  margin-top: 2rem;
 }

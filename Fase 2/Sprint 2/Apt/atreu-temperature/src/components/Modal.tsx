@@ -65,20 +65,20 @@ export default function Modal({
 
   const node = (
     <div
-      className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/60 p-4 overflow-y-auto"
+      className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
       onMouseDown={onClose}
       aria-modal="true"
       role="dialog"
     >
       <div
-        className={`w-full ${maxWidth} mt-10 bg-card text-on rounded-2xl shadow-2xl border border-border`}
+        className={`w-full ${maxWidth} mt-10 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700`}
         onMouseDown={(e) => e.stopPropagation()} // importante: que no se cierre al click dentro
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card backdrop-blur focus-brand">
-          <h3 className="text-lg font-semibold">{title}</h3>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700 sticky top-0 bg-slate-800 backdrop-blur-sm">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button
             onClick={onClose}
-            className="rounded-md px-2 py-1 hover:bg-card focus-brand"
+            className="rounded-md px-2 py-1 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
             aria-label="Cerrar"
           >
             ✕
