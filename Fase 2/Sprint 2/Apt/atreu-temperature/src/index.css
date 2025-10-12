@@ -1,84 +1,126 @@
 @import "tailwindcss";
+
+/* ====== SISTEMA DE COLORES UNIFICADO - LA HORNILLA ====== */
+:root {
+  /* Paleta principal La Hornilla (verde) */
+  --brand-50:  #eef7df;
+  --brand-100: #d9efbc;
+  --brand-200: #bfe487;
+  --brand-300: #a7d956;
+  --brand-400: #8fc72f;
+  --brand-500: #74b414;
+  --brand-600: #5ea310; /* Color principal */
+  --brand-700: #4a850c;
+  --brand-800: #3a690a;
+  --brand-900: #2c5107;
+
+  /* Neutros oscuros para fondo */
+  --bg-primary:   #0c1114;   /* Fondo principal */
+  --bg-secondary: #0f1518;   /* Fondo secundario */
+  --bg-card:      #10171a;   /* Fondo de tarjetas */
+  --bg-elevated:  #0f181a;   /* Fondo elevado */
+  
+  /* Bordes y separadores */
+  --border-subtle: #24333a;  /* Borde sutil */
+  --border-medium: #2a3d47;  /* Borde medio */
+  --border-strong: #3a4d5a;  /* Borde fuerte */
+  
+  /* Texto */
+  --text-primary:   #e9f2ee;   /* Texto principal */
+  --text-secondary: #a8b7b0;   /* Texto secundario */
+  --text-muted:     #7a8a85;   /* Texto atenuado */
+  
+  /* Estados del sistema */
+  --success:     #1ea672;   /* Verde éxito */
+  --warning:     #f59e0b;   /* Amarillo advertencia */
+  --error:       #ef4444;   /* Rojo error */
+  --info:        #3b82f6;   /* Azul información */
+  
+  /* Sombras */
+  --shadow-sm:   0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md:   0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg:   0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl:   0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-brand: 0 8px 22px rgba(94, 163, 16, 0.25);
+}
+
+/* ====== CONFIGURACIÓN BASE ====== */
 html, body, #root {
   height: 100%;
   width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
-/* variables simples de marca */
-:root {
-  --brand: #0ea5e9;     /* sky-500 */
-  --brand-dark: #0284c7;/* sky-600 */
-  --brand-accent: #22c55e; /* emerald-500 */
-}
-
-html, body, #root { height: 100%; }
-
-
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  color: var(--text-primary);
+  background: var(--bg-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ====== TIPOGRAFÍA ====== */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.125rem; }
+h6 { font-size: 1rem; }
+
+/* ====== ENLACES ====== */
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  color: var(--brand-400);
+  text-decoration: none;
+  transition: color 0.2s ease;
 }
+
 a:hover {
-  color: #535bf2;
+  color: var(--brand-300);
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
+/* ====== BOTONES ====== */
 button {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
   border-radius: 8px;
   border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  padding: 0.5rem 1rem;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+button:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
 }
+
+/* ====== UTILIDADES DE COLOR ====== */
+.text-brand { color: var(--brand-600); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-info { color: var(--info); }
+
+.bg-brand { background-color: var(--brand-600); }
+.bg-success { background-color: var(--success); }
+.bg-warning { background-color: var(--warning); }
+.bg-error { background-color: var(--error); }
+.bg-info { background-color: var(--info); }
+
+.border-brand { border-color: var(--brand-600); }
+.border-subtle { border-color: var(--border-subtle); }
+.border-medium { border-color: var(--border-medium); }
