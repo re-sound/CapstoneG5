@@ -76,20 +76,10 @@ export default function TunnelDetail({
   tunnelId,
   open,
   onClose,
-  frutaActual,
-  frutasDisponibles,
-  onChangeFruit,
-  rangeOverride,
-  onChangeRanges,
 }: {
   tunnelId: number;
   open: boolean;
   onClose: () => void;
-  frutaActual: Fruit;
-  frutasDisponibles: Fruit[];
-  onChangeFruit: (f: Fruit) => void;
-  rangeOverride?: Range;
-  onChangeRanges: (r: Range) => void;
 }) {
   const tun = TUNELES_MOCK.find((t) => t.id === tunnelId)!;
   

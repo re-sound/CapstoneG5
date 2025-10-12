@@ -108,7 +108,7 @@ export default function Dashboard() {
 
       <div className="mx-auto w-full max-w-[1920px] px-5 py-6">
         <h1 className="text-4xl font-extrabold tracking-tight mb-6">
-          Temperaturas — Datos en Tiempo Real
+          Temperaturas
         </h1>
         <div className="mb-2 text-sm text-slate-400">
           {loading && tunnels.length === 0 ? "Cargando..." : `${tunnels.length} túneles activos`} • {alerts.length} alertas totales
@@ -169,11 +169,6 @@ export default function Dashboard() {
           tunnelId={selected}
           open={true}
           onClose={() => setSelected(null)}
-          frutaActual={selectedTunnel.fruit}
-          frutasDisponibles={["CEREZA", "UVA", "CLEMENTINA", "GENÉRICA"]}
-          onChangeFruit={() => {}}
-          rangeOverride={{ min: 3.5, max: 12, idealMin: 4, idealMax: 9 }}
-          onChangeRanges={() => {}}
         />
       )}
     </div>
