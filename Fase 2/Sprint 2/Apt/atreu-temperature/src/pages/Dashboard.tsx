@@ -100,7 +100,12 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen app-bg">
       {/* Panel flotante de alarmas */}
-      <AlarmCenter newAlarms={newAlarms} onDismiss={dismiss} onClearAll={clearAll} />
+      <AlarmCenter 
+        allAlerts={alerts} 
+        newAlarms={newAlarms} 
+        onDismiss={dismiss} 
+        onClearAll={clearAll} 
+      />
 
       <div className="mx-auto w-full max-w-[1920px] px-5 py-6">
         <h1 className="text-4xl font-extrabold tracking-tight mb-6 text-white">
