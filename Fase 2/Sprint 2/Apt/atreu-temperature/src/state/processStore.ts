@@ -1,5 +1,5 @@
 // src/state/processStore.ts
-// Mini-store sin dependencias para manejar procesos por túnel (Sprint 1)
+// Mini-store sin dependencias para manejar procesos por túnel
 
 import { RANGOS_POR_FRUTA } from "../data/tunnelMock";
 

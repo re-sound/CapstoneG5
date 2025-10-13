@@ -116,13 +116,13 @@ function seedOne(tunnelId: number) {
 
   // Log para debugging (opcional)
   if (isAnomalous) {
-    console.log(`⚠️  Túnel ${tunnelId}: Lectura anómala generada (AMB_OUT: ${values.ambOut}°C)`);
+    console.log(`Túnel ${tunnelId}: Lectura anómala generada (AMB_OUT: ${values.ambOut}°C)`);
   }
 }
 
-console.log("🔄 Simulador ON - Generando lecturas cada ~40s");
-console.log("📊 Rango de temperaturas: 3°C - 15°C");
-console.log("⚠️  20% de probabilidad de datos anómalos por ciclo");
+console.log("Simulador ON - Generando lecturas cada ~40s");
+console.log("Rango de temperaturas: 3°C - 15°C");
+console.log("20% de probabilidad de datos anómalos por ciclo");
 console.log("---");
 
 seedAll();
