@@ -113,7 +113,7 @@ export default function TunnelDetail({
 }
 
 /* ----------------------------------------------------------------
-   Temperaturas (resumen) — usa el último registro del histórico real
+   Temperaturas 
 ------------------------------------------------------------------*/
 
 function ResumenTemperaturas({ tunnelId, historico }: { tunnelId: number; historico: HistoryRow[] }) {
@@ -765,7 +765,7 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
           </tbody>
         </table>
       </div>
-      <div className="text-xs text-slate-400 mt-2">(* Datos desde API ─ refresco automático)</div>
+      <div className="text-xs text-slate-400 mt-2">(*refresco automático)</div>
     </div>
   );
 }

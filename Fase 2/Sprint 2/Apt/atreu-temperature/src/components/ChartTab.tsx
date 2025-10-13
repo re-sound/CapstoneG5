@@ -149,7 +149,7 @@ export default function ChartTab({
           notMerge={true}
         />
         <div className="text-xs text-slate-400 mt-2 px-2">
-          💡 Interactivo: zoom (rueda/drag), pan, clic en leyenda para ocultar sensores, exportar PNG (📷).
+          Interactivo: zoom, exportar PNG .
         </div>
       </div>
     </div>
