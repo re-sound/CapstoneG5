@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Topbar() {
   const { session, logout } = useAuth();
@@ -14,9 +14,21 @@ export default function Topbar() {
     setIsMobileMenuOpen(false);
   };
 
+  // Cerrar menú móvil cuando se redimensiona a desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) { // md breakpoint
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <header className="topbar px-4 sm:px-6 py-4 sticky top-0 z-20">
-      <div className="max-w-7xl mx-auto flex items-center justify-between pr-20 md:pr-0">
+      <div className="max-w-7xl mx-auto flex items-center justify-between pr-16 sm:pr-20 md:pr-24 lg:pr-32 xl:pr-40">
         {/* Logo */}
         <Link 
           to="/dashboard" 
@@ -30,10 +42,10 @@ export default function Topbar() {
           <span className="sm:hidden">AT</span>
         </Link>
 
-        {/* Botón hamburguesa para móvil */}
+        {/* Botón hamburguesa para móvil - solo visible en pantallas pequeñas */}
         <button
           onClick={toggleMobileMenu}
-          className="md:hidden p-2 rounded-lg text-green-100 hover:text-white hover:bg-green-600/10 transition-colors"
+          className="block md:hidden p-2 rounded-lg text-green-100 hover:text-white hover:bg-green-600/10 transition-colors"
           aria-label="Toggle mobile menu"
         >
           <svg 
@@ -132,9 +144,9 @@ export default function Topbar() {
         </div>
       </div>
 
-      {/* Menú móvil */}
+      {/* Menú móvil - solo visible en pantallas pequeñas */}
       {isMobileMenuOpen && (
-        <div className="md:hidden mt-4 py-4 border-t border-slate-700/50">
+        <div className="block md:hidden mt-4 py-4 border-t border-slate-700/50">
           <div className="flex flex-col space-y-2">
             {/* Navegación móvil */}
             <nav className="flex flex-col space-y-1">
