@@ -17,23 +17,23 @@ export default function AlarmCenter({
   const [showAll, setShowAll] = useState(false);
 
   return (
-    <div className="fixed top-4 right-4 z-50">
+    <div className="fixed top-20 right-4 z-50 md:top-4">
       {/* Botón campana */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`relative group rounded-xl border px-4 py-3 transition-all duration-200 hover:scale-105 hover:shadow-lg ${
+        className={`relative group rounded-lg md:rounded-xl border px-2 py-2 md:px-4 md:py-3 transition-all duration-200 hover:scale-105 hover:shadow-lg ${
           open 
             ? "border-green-500 bg-green-900/20 text-white" 
             : "border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-100 hover:text-white"
         }`}
         aria-label="Ver alarmas"
       >
-        <div className="flex items-center gap-2">
-          <div className="text-lg">{open ? "🔔" : "🔕"}</div>
-          <span className="text-sm font-medium">Alarmas</span>
+        <div className="flex items-center gap-1 md:gap-2">
+          <div className="text-sm md:text-lg">{open ? "🔔" : "🔕"}</div>
+          <span className="text-xs md:text-sm font-medium hidden sm:inline">Alarmas</span>
         </div>
         {(allAlerts.length > 0 || newAlarms.length > 0) && (
-          <span className={`absolute -top-2 -right-2 text-xs rounded-full px-2 py-1 font-bold shadow-lg ${
+          <span className={`absolute -top-1 -right-1 md:-top-2 md:-right-2 text-[10px] md:text-xs rounded-full px-1.5 py-0.5 md:px-2 md:py-1 font-bold shadow-lg ${
             newAlarms.length > 0 
               ? "bg-red-500 text-white animate-pulse" 
               : "bg-orange-500 text-white"
@@ -45,7 +45,7 @@ export default function AlarmCenter({
 
       {/* Panel */}
       {open && (allAlerts.length > 0 || newAlarms.length > 0) && (
-        <div className="mt-3 w-[400px] max-w-[90vw] rounded-xl border border-slate-600/50 bg-slate-900/95 backdrop-blur-sm p-4 shadow-2xl">
+        <div className="mt-3 w-[320px] sm:w-[400px] max-w-[90vw] rounded-xl border border-slate-600/50 bg-slate-900/95 backdrop-blur-sm p-3 sm:p-4 shadow-2xl">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${
