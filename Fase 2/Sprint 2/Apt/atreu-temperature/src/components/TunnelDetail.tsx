@@ -3,6 +3,7 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import Modal from "./Modal";
 import Tabs, { type TabItem } from "./Tabs";
 import ChartTab from "./ChartTab";
+import { jsPDF } from "jspdf";
 import {
   TUNELES_MOCK,
   RANGOS_POR_FRUTA,
@@ -536,57 +537,229 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 ------------------------------------------------------------------*/
 function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunnelId: number }) {
   const areaRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   async function exportPDF() {
+    if (isExporting) return; // Evitar múltiples clics
+    
+    setIsExporting(true);
     try {
-      const { default: html2canvas } = await import("html2canvas");
-      const { jsPDF } = await import("jspdf");
-      const canvas = await html2canvas(areaRef.current!, { scale: 2, backgroundColor: "#0b1220" });
-      const img = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
-      const w = canvas.width * ratio;
-      const h = canvas.height * ratio;
-      pdf.addImage(img, "PNG", (pageW - w) / 2, (pageH - h) / 2, w, h);
-      pdf.save(`historico-tunel-${tunnelId}.pdf`);
+      // Verificar que el elemento existe
+      if (!areaRef.current) {
+        throw new Error("No se pudo encontrar la tabla para exportar");
+      }
+
+      // Crear un PDF profesional con header y contenido estructurado
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      
+      // Header del PDF
+      pdf.setFontSize(20);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(94, 163, 16); // Verde La Hornilla
+      pdf.text("Reporte de Histórico de Temperaturas", 20, 20);
+      
+      pdf.setFontSize(14);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Túnel ${tunnelId}`, 20, 30);
+      
+      // Información del rango de datos
+      if (historico.length > 0) {
+        const firstDate = new Date(historico[historico.length - 1].ts);
+        const lastDate = new Date(historico[0].ts);
+        const rangeStr = `${firstDate.toLocaleDateString('es-ES')} ${firstDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${lastDate.toLocaleDateString('es-ES')} ${lastDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+        
+        pdf.setFontSize(10);
+        pdf.setTextColor(80, 80, 80);
+        pdf.text(`Período: ${rangeStr}`, 20, 40);
+        pdf.text(`Total de registros: ${historico.length}`, 20, 47);
+      }
+      
+      // Fecha de generación
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      pdf.setFontSize(10);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text(`Generado el: ${dateStr}`, 20, 54);
+      
+      // Línea separadora
+      pdf.setDrawColor(94, 163, 16);
+      pdf.setLineWidth(0.5);
+      pdf.line(20, 60, 270, 60);
+      
+      // Crear tabla directamente en el PDF para evitar problemas con html2canvas
+      const startY = 70;
+      const rowHeight = 8;
+      const colWidths = [50, 20, 20, 20, 20, 20, 20];
+      const startX = 20;
+      
+      // Headers de la tabla
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFillColor(94, 163, 16);
+      pdf.setTextColor(255, 255, 255);
+      
+      const headers = ['Fecha', 'AMB OUT', 'AMB RET', 'IZQ EXT', 'IZQ INT', 'DER INT', 'DER EXT'];
+      let currentX = startX;
+      headers.forEach((header, index) => {
+        pdf.rect(currentX, startY, colWidths[index], rowHeight, 'F');
+        pdf.text(header, currentX + 2, startY + 5);
+        currentX += colWidths[index];
+      });
+      
+      // Datos de la tabla - procesar todo el historial
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(0, 0, 0);
+      
+      let currentPage = 1;
+      let currentY = startY + rowHeight; // Empezar después del header
+      
+      // Procesar todo el historial, no solo 30 registros
+      historico.forEach((row, index) => {
+        // Verificar si necesitamos una nueva página
+        if (currentY + rowHeight > pdf.internal.pageSize.getHeight() - 20) {
+          // Agregar footer a la página actual
+          pdf.setFontSize(8);
+          pdf.setTextColor(120, 120, 120);
+          pdf.text("La Hornilla - Sistema de Monitoreo de Temperaturas", 20, pdf.internal.pageSize.getHeight() - 10);
+          pdf.text(`Página ${currentPage}`, pdf.internal.pageSize.getWidth() - 30, pdf.internal.pageSize.getHeight() - 10);
+          
+          // Crear nueva página
+          pdf.addPage();
+          currentPage++;
+          currentY = startY + rowHeight; // Resetear Y para la nueva página
+          
+          // Recrear headers en la nueva página
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "bold");
+          pdf.setFillColor(94, 163, 16);
+          pdf.setTextColor(255, 255, 255);
+          
+          currentX = startX;
+          headers.forEach((header, headerIndex) => {
+            pdf.rect(currentX, startY, colWidths[headerIndex], rowHeight, 'F');
+            pdf.text(header, currentX + 2, startY + 5);
+            currentX += colWidths[headerIndex];
+          });
+          
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor(0, 0, 0);
+        }
+        
+        // Fondo alternado para las filas
+        if (index % 2 === 0) {
+          pdf.setFillColor(240, 240, 240);
+          currentX = startX;
+          colWidths.forEach(width => {
+            pdf.rect(currentX, currentY, width, rowHeight, 'F');
+            currentX += width;
+          });
+        }
+        
+        // Datos de la fila
+        currentX = startX;
+        const rowData = [
+          new Date(row.ts).toLocaleString('es-ES', { 
+            month: '2-digit', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          }),
+          fmt(row.AMB_OUT),
+          fmt(row.AMB_RET),
+          fmt(row.IZQ_EXT_ENT ?? row.PULP_3),
+          fmt(row.IZQ_INT_ENT ?? row.PULP_2),
+          fmt(row.DER_INT_ENT ?? row.PULP_1),
+          fmt(row.DER_EXT_ENT ?? row.PULP_4)
+        ];
+        
+        rowData.forEach((data, colIndex) => {
+          pdf.text(data, currentX + 2, currentY + 5);
+          currentX += colWidths[colIndex];
+        });
+        
+        // Mover a la siguiente fila
+        currentY += rowHeight;
+      });
+      
+      // Footer final con numeración de página
+      pdf.setFontSize(8);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text("La Hornilla - Sistema de Monitoreo de Temperaturas", 20, pdf.internal.pageSize.getHeight() - 10);
+      pdf.text(`Página ${currentPage}`, pdf.internal.pageSize.getWidth() - 30, pdf.internal.pageSize.getHeight() - 10);
+      
+      // Guardar el PDF
+      pdf.save(`historico-tunel-${tunnelId}-${now.toISOString().split('T')[0]}.pdf`);
+      
     } catch (e) {
-      console.error(e);
-      alert("No se pudo exportar el PDF. ¿Instalaste jspdf y html2canvas?");
+      console.error("Error al exportar PDF:", e);
+      alert(`Error al exportar PDF: ${e instanceof Error ? e.message : 'Error desconocido'}`);
+    } finally {
+      setIsExporting(false);
     }
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold">Últimas mediciones</div>
-        <button onClick={exportPDF} className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500">Exportar PDF</button>
+      <div className="flex items-center justify-between mb-4">
+        <div className="font-semibold text-white">Últimas mediciones</div>
+        <button 
+          onClick={exportPDF} 
+          disabled={isExporting}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+            isExporting 
+              ? 'bg-green-600/50 text-green-200 cursor-not-allowed' 
+              : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
+          }`}
+        >
+          {isExporting ? (
+            <>
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generando PDF...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Exportar PDF
+            </>
+          )}
+        </button>
       </div>
 
-      <div ref={areaRef} className="overflow-x-auto rounded-xl border border-slate-700/60 p-3 bg-slate-900/40">
+      <div ref={areaRef} className="overflow-x-auto rounded-xl border border-slate-700/60 p-4 bg-slate-900/40">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left border-b border-slate-700">
-              <th className="py-2">Fecha</th>
-              <th className="py-2">AMB OUT</th>
-              <th className="py-2">AMB RET</th>
-              <th className="py-2">IZQ EXT ENT</th>
-              <th className="py-2">IZQ INT ENT</th>
-              <th className="py-2">DER INT ENT</th>
-              <th className="py-2">DER EXT ENT</th>
+            <tr className="text-left border-b-2 border-green-600">
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">Fecha</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">AMB OUT</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">AMB RET</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">IZQ EXT ENT</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">IZQ INT ENT</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">DER INT ENT</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">DER EXT ENT</th>
             </tr>
           </thead>
           <tbody>
-            {historico.map((row) => (
-              <tr key={row.ts} className="border-b border-slate-800">
-                <td className="py-2">{new Date(row.ts).toLocaleString()}</td>
-                <td className="py-2">{fmt(row.AMB_OUT)}</td>
-                <td className="py-2">{fmt(row.AMB_RET)}</td>
-                <td className="py-2">{fmt(row.IZQ_EXT_ENT ?? row.PULP_3)}</td>
-                <td className="py-2">{fmt(row.IZQ_INT_ENT ?? row.PULP_2)}</td>
-                <td className="py-2">{fmt(row.DER_INT_ENT ?? row.PULP_1)}</td>
-                <td className="py-2">{fmt(row.DER_EXT_ENT ?? row.PULP_4)}</td>
+            {historico.map((row, index) => (
+              <tr key={row.ts} className={`border-b border-slate-700 ${index % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-900/20'}`}>
+                <td className="py-2 px-2 text-slate-200">{new Date(row.ts).toLocaleString()}</td>
+                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.AMB_OUT)}</td>
+                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.AMB_RET)}</td>
+                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.IZQ_EXT_ENT ?? row.PULP_3)}</td>
+                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.IZQ_INT_ENT ?? row.PULP_2)}</td>
+                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.DER_INT_ENT ?? row.PULP_1)}</td>
+                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.DER_EXT_ENT ?? row.PULP_4)}</td>
               </tr>
             ))}
           </tbody>
