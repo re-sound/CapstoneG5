@@ -18,7 +18,7 @@ export default function AlarmCenter({
 
   return (
     <div className="fixed top-20 right-2 sm:right-3 md:top-4 md:right-6 lg:right-8 xl:right-12 z-50">
-      {/* Botón campana */}
+      {/* Botón campana - posición fija */}
       <button
         onClick={() => setOpen((v) => !v)}
         className={`relative group rounded-lg md:rounded-xl border px-2 py-2 sm:px-3 sm:py-2 md:px-3 md:py-2 lg:px-4 lg:py-3 transition-all duration-200 hover:scale-105 hover:shadow-lg ${
@@ -43,9 +43,9 @@ export default function AlarmCenter({
         )}
       </button>
 
-      {/* Panel */}
+      {/* Panel - se abre hacia la izquierda */}
       {open && (allAlerts.length > 0 || newAlarms.length > 0) && (
-        <div className="mt-3 w-[280px] sm:w-[320px] md:w-[360px] lg:w-[400px] max-w-[90vw] rounded-xl border border-slate-600/50 bg-slate-900/95 backdrop-blur-sm p-3 sm:p-4 shadow-2xl">
+        <div className="absolute top-full right-0 mt-3 w-[280px] sm:w-[320px] md:w-[360px] lg:w-[400px] max-w-[90vw] rounded-xl border border-slate-600/50 bg-slate-900/95 backdrop-blur-sm p-3 sm:p-4 shadow-2xl">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${
