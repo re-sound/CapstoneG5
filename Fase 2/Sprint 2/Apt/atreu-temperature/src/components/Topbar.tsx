@@ -1,39 +1,16 @@
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect } from "react";
 
 export default function Topbar() {
   const { session, logout } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  // Cerrar menú móvil cuando se redimensiona a desktop
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) { // md breakpoint
-        setIsMobileMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   return (
     <header className="topbar px-4 sm:px-6 py-4 sticky top-0 z-20">
-      <div className="max-w-7xl mx-auto flex items-center justify-between pr-16 sm:pr-20 md:pr-24 lg:pr-32 xl:pr-40">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <Link 
           to="/dashboard" 
           className="font-bold text-lg sm:text-xl tracking-wide text-white hover:text-green-100 transition-colors flex items-center gap-2"
-          onClick={closeMobileMenu}
         >
           <div className="w-7 h-7 sm:w-8 sm:h-8 bg-green-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-xs sm:text-sm">AT</span>
@@ -42,202 +19,96 @@ export default function Topbar() {
           <span className="sm:hidden">AT</span>
         </Link>
 
-        {/* Botón hamburguesa para móvil - solo visible en pantallas pequeñas */}
-        <button
-          onClick={toggleMobileMenu}
-          className="block md:hidden p-2 rounded-lg text-green-100 hover:text-white hover:bg-green-600/10 transition-colors"
-          aria-label="Toggle mobile menu"
-        >
-          <svg 
-            className="w-6 h-6" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            {isMobileMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
-
-        {/* Navegación desktop */}
-        <nav className="hidden md:flex items-center gap-1">
+        {/* Navegación - siempre visible pero compacta en móviles */}
+        <nav className="flex items-center gap-0.5 sm:gap-1">
           <NavLink 
             to="/dashboard" 
             className={({isActive}) => 
-              `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              `px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 isActive 
                   ? "text-white bg-green-600/20 border border-green-500/30" 
                   : "text-green-100 hover:text-white hover:bg-green-600/10"
               }`
             }
           >
-            Dashboard
+            <span className="hidden sm:inline">Dashboard</span>
+            <span className="sm:hidden">Dash</span>
           </NavLink>
           <NavLink 
             to="/historico" 
             className={({isActive}) => 
-              `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              `px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 isActive 
                   ? "text-white bg-green-600/20 border border-green-500/30" 
                   : "text-green-100 hover:text-white hover:bg-green-600/10"
               }`
             }
           >
-            Histórico
+            <span className="hidden sm:inline">Histórico</span>
+            <span className="sm:hidden">Hist</span>
           </NavLink>
           <NavLink 
             to="/alertas" 
             className={({isActive}) => 
-              `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              `px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 isActive 
                   ? "text-white bg-green-600/20 border border-green-500/30" 
                   : "text-green-100 hover:text-white hover:bg-green-600/10"
               }`
             }
           >
-            Alertas
+            <span className="hidden sm:inline">Alertas</span>
+            <span className="sm:hidden">Alert</span>
           </NavLink>
           <NavLink 
             to="/reportes" 
             className={({isActive}) => 
-              `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              `px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 isActive 
                   ? "text-white bg-green-600/20 border border-green-500/30" 
                   : "text-green-100 hover:text-white hover:bg-green-600/10"
               }`
             }
           >
-            Reportes
+            <span className="hidden sm:inline">Reportes</span>
+            <span className="sm:hidden">Rep</span>
           </NavLink>
           {session?.role === "admin" && (
             <NavLink 
               to="/admin" 
               className={({isActive}) => 
-                `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                `px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                   isActive 
                     ? "text-white bg-green-600/20 border border-green-500/30" 
                     : "text-green-100 hover:text-white hover:bg-green-600/10"
                 }`
               }
             >
-              Admin
+              <span className="hidden sm:inline">Admin</span>
+              <span className="sm:hidden">Adm</span>
             </NavLink>
           )}
         </nav>
 
-        {/* Usuario y logout desktop */}
-        <div className="hidden md:flex items-center gap-4">
-          <div className="text-sm text-green-200">
+        {/* Usuario y logout */}
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+          <div className="text-xs sm:text-sm text-green-200 hidden sm:block">
             <span className="font-medium text-white">{session?.name}</span>
-            <span className="mx-2">•</span>
+            <span className="mx-1 sm:mx-2">•</span>
             <span className="capitalize">{session?.role}</span>
+          </div>
+          <div className="text-xs text-green-200 sm:hidden">
+            <span className="font-medium text-white">{session?.name?.split(' ')[0]}</span>
           </div>
           <button 
             onClick={logout} 
-            className="px-4 py-2 text-sm font-medium text-green-100 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 rounded-lg border border-slate-600 hover:border-slate-500 transition-all duration-200"
+            className="px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-green-100 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 rounded-lg border border-slate-600 hover:border-slate-500 transition-all duration-200"
           >
-            Salir
+            <span className="hidden sm:inline">Salir</span>
+            <span className="sm:hidden">X</span>
           </button>
         </div>
       </div>
-
-      {/* Menú móvil - solo visible en pantallas pequeñas */}
-      {isMobileMenuOpen && (
-        <div className="block md:hidden mt-4 py-4 border-t border-slate-700/50">
-          <div className="flex flex-col space-y-2">
-            {/* Navegación móvil */}
-            <nav className="flex flex-col space-y-1">
-              <NavLink 
-                to="/dashboard" 
-                onClick={closeMobileMenu}
-                className={({isActive}) => 
-                  `px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive 
-                      ? "text-white bg-green-600/20 border border-green-500/30" 
-                      : "text-green-100 hover:text-white hover:bg-green-600/10"
-                  }`
-                }
-              >
-                Dashboard
-              </NavLink>
-              <NavLink 
-                to="/historico" 
-                onClick={closeMobileMenu}
-                className={({isActive}) => 
-                  `px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive 
-                      ? "text-white bg-green-600/20 border border-green-500/30" 
-                      : "text-green-100 hover:text-white hover:bg-green-600/10"
-                  }`
-                }
-              >
-                Histórico
-              </NavLink>
-              <NavLink 
-                to="/alertas" 
-                onClick={closeMobileMenu}
-                className={({isActive}) => 
-                  `px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive 
-                      ? "text-white bg-green-600/20 border border-green-500/30" 
-                      : "text-green-100 hover:text-white hover:bg-green-600/10"
-                  }`
-                }
-              >
-                Alertas
-              </NavLink>
-              <NavLink 
-                to="/reportes" 
-                onClick={closeMobileMenu}
-                className={({isActive}) => 
-                  `px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive 
-                      ? "text-white bg-green-600/20 border border-green-500/30" 
-                      : "text-green-100 hover:text-white hover:bg-green-600/10"
-                  }`
-                }
-              >
-                Reportes
-              </NavLink>
-              {session?.role === "admin" && (
-                <NavLink 
-                  to="/admin" 
-                  onClick={closeMobileMenu}
-                  className={({isActive}) => 
-                    `px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      isActive 
-                        ? "text-white bg-green-600/20 border border-green-500/30" 
-                        : "text-green-100 hover:text-white hover:bg-green-600/10"
-                    }`
-                  }
-                >
-                  Admin
-                </NavLink>
-              )}
-            </nav>
-
-            {/* Usuario y logout móvil */}
-            <div className="pt-4 border-t border-slate-700/50">
-              <div className="px-4 py-2 text-sm text-green-200 mb-3">
-                <div className="font-medium text-white">{session?.name}</div>
-                <div className="text-xs capitalize text-green-300">{session?.role}</div>
-              </div>
-              <button 
-                onClick={() => {
-                  logout();
-                  closeMobileMenu();
-                }}
-                className="w-full px-4 py-3 text-sm font-medium text-green-100 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 rounded-lg border border-slate-600 hover:border-slate-500 transition-all duration-200"
-              >
-                Salir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }
