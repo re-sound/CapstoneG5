@@ -107,11 +107,11 @@ export default function Dashboard() {
         onClearAll={clearAll} 
       />
 
-      <div className="mx-auto w-full max-w-[1920px] px-5 py-6">
-        <h1 className="text-4xl font-extrabold tracking-tight mb-6 text-white">
+      <div className="mx-auto w-full max-w-[1920px] px-4 sm:px-5 py-4 sm:py-6">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight mb-4 sm:mb-6 text-white">
           Temperaturas
         </h1>
-        <div className="mb-2 text-sm text-green-200">
+        <div className="mb-2 text-xs sm:text-sm text-green-200">
           {loading && tunnels.length === 0 ? "Cargando..." : `${tunnels.length} túneles activos`} • {alerts.length} alertas totales
           {error && <span className="ml-2 text-red-400">• Error de conexión</span>}
         </div>
@@ -125,14 +125,14 @@ export default function Dashboard() {
 
         {/* Estado de carga inicial */}
         {loading && tunnels.length === 0 && !error && (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-slate-400">Cargando datos del servidor...</div>
+          <div className="flex items-center justify-center py-12 sm:py-20">
+            <div className="text-slate-400 text-sm sm:text-base">Cargando datos del servidor...</div>
           </div>
         )}
 
         {/* Grid de túneles */}
         {tunnels.length > 0 && (
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {tunnels.map((t) => (
               <TunnelCardRect
                 key={t.id}
@@ -146,16 +146,16 @@ export default function Dashboard() {
         )}
 
         {/* Cámaras */}
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold mb-3 text-white">Cámaras</h2>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+        <section className="mt-6 sm:mt-8">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 text-white">Cámaras</h2>
+          <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {cameras.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-3 hover:bg-slate-900 transition-colors"
+                className="flex items-center justify-between rounded-lg sm:rounded-xl border border-slate-700 bg-slate-900/80 px-3 sm:px-4 py-2 sm:py-3 hover:bg-slate-900 transition-colors"
               >
-                <span className="text-sm text-green-200">Cámara {c.id}</span>
-                <span className="text-[12px] px-2 py-1 rounded-full bg-green-800/40 border border-green-600/40 text-green-100">
+                <span className="text-xs sm:text-sm text-green-200">Cám {c.id}</span>
+                <span className="text-[10px] sm:text-[12px] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-green-800/40 border border-green-600/40 text-green-100">
                   {c.temp}°C
                 </span>
               </div>
