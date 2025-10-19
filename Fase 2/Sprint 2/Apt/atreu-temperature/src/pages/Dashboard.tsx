@@ -111,6 +111,7 @@ export default function Dashboard() {
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight mb-4 sm:mb-6 text-white">
           Temperaturas
         </h1>
+        
         <div className="mb-2 text-xs sm:text-sm text-green-200">
           {loading && tunnels.length === 0 ? "Cargando..." : `${tunnels.length} túneles activos`} • {alerts.length} alertas totales
           {error && <span className="ml-2 text-red-400">• Error de conexión</span>}
