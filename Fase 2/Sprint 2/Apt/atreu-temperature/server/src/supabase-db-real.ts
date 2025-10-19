@@ -1,4 +1,4 @@
-import { supabase, type TunnelRow, type ReadingRow, type ProcessRow, type ProcessHistoryRow } from './supabase.js';
+import { supabase, supabaseAdmin, type TunnelRow, type ReadingRow, type ProcessRow, type ProcessHistoryRow } from './supabase.js';
 
 /**
  * Capa de abstracción de base de datos para Supabase (esquema real)
@@ -116,16 +116,20 @@ export async function getProcess(tunnelId: number): Promise<ProcessRow | null> {
 }
 
 export async function createProcess(process: Omit<ProcessRow, 'id' | 'created_at'>): Promise<ProcessRow> {
-  const { data, error } = await supabase
+  console.log('🔄 Creando proceso en Supabase:', process);
+  
+  const { data, error } = await supabaseAdmin
     .from('processes')
     .insert(process)
     .select()
     .single();
 
   if (error) {
+    console.error('❌ Error creando proceso:', error);
     throw new Error(`Error creando proceso: ${error.message}`);
   }
 
+  console.log('✅ Proceso creado exitosamente:', data);
   return data;
 }
 
@@ -179,16 +183,20 @@ export async function getProcessHistory(tunnelId: number): Promise<ProcessHistor
 }
 
 export async function insertProcessHistory(history: Omit<ProcessHistoryRow, 'id' | 'created_at'>): Promise<ProcessHistoryRow> {
-  const { data, error } = await supabase
+  console.log('🔄 Insertando en process_history:', history);
+  
+  const { data, error } = await supabaseAdmin
     .from('process_history')
     .insert(history)
     .select()
     .single();
 
   if (error) {
+    console.error('❌ Error insertando historial:', error);
     throw new Error(`Error insertando historial: ${error.message}`);
   }
 
+  console.log('✅ Historial insertado exitosamente:', data);
   return data;
 }
 

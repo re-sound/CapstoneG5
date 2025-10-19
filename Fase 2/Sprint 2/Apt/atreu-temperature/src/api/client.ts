@@ -87,10 +87,16 @@ export async function apiStartProcess(tunnelId: number, payload: {
   destination?: string;
   origin?: string;
   condition_initial?: string;
+  description?: string;
 }): Promise<{ ok: boolean; tunnelId: number; status: string }> {
+  const token = localStorage.getItem('auth_token');
+  
   const r = await fetch(`${BASE}/api/processes/${tunnelId}/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      ...(token && { "Authorization": `Bearer ${token}` })
+    },
     body: JSON.stringify(payload),
   });
   if (!r.ok) throw new Error("Error al iniciar proceso");
@@ -129,9 +135,14 @@ export async function apiResumeProcess(tunnelId: number): Promise<{ ok: boolean;
 }
 
 export async function apiFinalizeProcess(tunnelId: number, ended_by: string): Promise<{ ok: boolean; status: string }> {
+  const token = localStorage.getItem('auth_token');
+  
   const r = await fetch(`${BASE}/api/processes/${tunnelId}/finalize`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      ...(token && { "Authorization": `Bearer ${token}` })
+    },
     body: JSON.stringify({ ended_by }),
   });
   if (!r.ok) throw new Error("Error al finalizar proceso");
