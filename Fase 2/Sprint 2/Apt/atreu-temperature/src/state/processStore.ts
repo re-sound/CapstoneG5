@@ -1,5 +1,5 @@
 // src/state/processStore.ts
-// Mini-store sin dependencias para manejar procesos por túnel (Sprint 1)
+// Mini-store sin dependencias para manejar procesos por túnel
 
 import { RANGOS_POR_FRUTA } from "../data/tunnelMock";
 
@@ -109,6 +109,7 @@ export function startProcess(
 
 export function updateRanges(tunnelId: number, ranges: Range) {
   const p = getProcess(tunnelId);
+  if (!p) return; // No hay proceso activo
   state.byId.set(tunnelId, { ...p, ranges, lastChangeAt: new Date().toISOString() });
   emit();
 }
@@ -118,26 +119,29 @@ export function updateProcessInfo(
   patch: Partial<Omit<TunnelProcess, "tunnelId" | "status">>
 ) {
   const p = getProcess(tunnelId);
+  if (!p) return; // No hay proceso activo
   state.byId.set(tunnelId, { ...p, ...patch, lastChangeAt: new Date().toISOString() });
   emit();
 }
 
 export function pauseProcess(tunnelId: number) {
   const p = getProcess(tunnelId);
-  if (p.status !== "running") return;
+  if (!p || p.status !== "running") return;
   state.byId.set(tunnelId, { ...p, status: "paused", lastChangeAt: new Date().toISOString() });
   emit();
 }
 
 export function resumeProcess(tunnelId: number) {
   const p = getProcess(tunnelId);
-  if (p.status !== "paused") return;
+  if (!p || p.status !== "paused") return;
   state.byId.set(tunnelId, { ...p, status: "running", lastChangeAt: new Date().toISOString() });
   emit();
 }
 
 export function finalizeProcess(tunnelId: number, endedBy: string) {
   const p = getProcess(tunnelId);
+  if (!p) return; // No hay proceso activo
+  
   const endedAt = new Date().toISOString();
 
   // guardar snapshot en historial
@@ -158,7 +162,7 @@ export function finalizeProcess(tunnelId: number, endedBy: string) {
   list.unshift(item);
   state.history.set(tunnelId, list);
 
-  // volver a estado “Disponible”
+  // volver a estado "Disponible"
   state.byId.set(tunnelId, { ...defaultProcess(tunnelId), lastChangeAt: endedAt });
   emit();
 }

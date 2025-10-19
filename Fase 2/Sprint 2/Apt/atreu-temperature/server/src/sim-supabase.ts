@@ -1,4 +1,9 @@
-import { db } from "./db.js";
+import { insertReading } from "./supabase-db.js";
+
+/**
+ * Simulador de datos para Supabase
+ * Genera lecturas realistas cada 40 segundos
+ */
 
 /**
  * Genera un valor aleatorio con mayor variación
@@ -14,7 +19,7 @@ function randomTemp(min: number, max: number): number {
  * Genera lecturas para un túnel con variación realista (3-15°C)
  * Ocasionalmente genera valores extremos para activar alarmas
  */
-function seedOne(tunnelId: number) {
+async function seedOne(tunnelId: number) {
   const now = new Date().toISOString();
   
   // 20% de probabilidad de generar datos anómalos (para activar alarmas)
@@ -95,41 +100,51 @@ function seedOne(tunnelId: number) {
     derExtSal: sensorOut() ?? derExtSal,
   };
 
-  db.prepare(`
-    INSERT INTO readings
-    (tunnel_id, ts, amb_out, amb_ret, izq_ext_ent, izq_int_ent, der_int_ent, der_ext_ent,
-     izq_ext_sal, izq_int_sal, der_int_sal, der_ext_sal)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    tunnelId, now,
-    values.ambOut,
-    values.ambRet,
-    values.izqExtEnt,
-    values.izqIntEnt,
-    values.derIntEnt,
-    values.derExtEnt,
-    values.izqExtSal,
-    values.izqIntSal,
-    values.derIntSal,
-    values.derExtSal
-  );
+  try {
+    await insertReading({
+      tunnel_id: tunnelId,
+      ts: now,
+      amb_out: values.ambOut,
+      amb_ret: values.ambRet,
+      izq_ext_ent: values.izqExtEnt,
+      izq_int_ent: values.izqIntEnt,
+      der_int_ent: values.derIntEnt,
+      der_ext_ent: values.derExtEnt,
+      izq_ext_sal: values.izqExtSal,
+      izq_int_sal: values.izqIntSal,
+      der_int_sal: values.derIntSal,
+      der_ext_sal: values.derExtSal
+    });
 
-  // Log para debugging (opcional)
-  if (isAnomalous) {
-    console.log(`Túnel ${tunnelId}: Lectura anómala generada (AMB_OUT: ${values.ambOut}°C)`);
+    // Log para debugging (opcional)
+    if (isAnomalous) {
+      console.log(`⚠️  Túnel ${tunnelId}: Lectura anómala generada (AMB_OUT: ${values.ambOut}°C)`);
+    }
+  } catch (error) {
+    console.error(`❌ Error insertando lectura para túnel ${tunnelId}:`, error);
   }
 }
 
-console.log("Simulador ON - Generando lecturas cada ~40s");
-console.log("Rango de temperaturas: 3°C - 15°C");
-console.log("20% de probabilidad de datos anómalos por ciclo");
+console.log("🔄 Simulador Supabase ON - Generando lecturas cada ~40s");
+console.log("📊 Rango de temperaturas: 3°C - 15°C");
+console.log("⚠️  20% de probabilidad de datos anómalos por ciclo");
 console.log("---");
 
-seedAll();
-setInterval(seedAll, 40000); // 40s
-
-function seedAll() {
+async function seedAll() {
   const timestamp = new Date().toLocaleTimeString('es-ES');
   console.log(`[${timestamp}] Insertando lecturas para 7 túneles...`);
-  for (let id = 1; id <= 7; id++) seedOne(id);
+  
+  try {
+    // Ejecutar todas las inserciones en paralelo
+    await Promise.all(
+      Array.from({ length: 7 }, (_, i) => seedOne(i + 1))
+    );
+    console.log(`✅ [${timestamp}] Lecturas insertadas exitosamente`);
+  } catch (error) {
+    console.error(`❌ [${timestamp}] Error insertando lecturas:`, error);
+  }
 }
+
+// Ejecutar inmediatamente y luego cada 40 segundos
+seedAll();
+setInterval(seedAll, 40000); // 40s

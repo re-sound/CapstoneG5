@@ -53,6 +53,8 @@ export default function useAlerts(tunnels: TunnelLive[]) {
       }
 
       const range: Range = proc.ranges;
+      // Usar la fruta del proceso activo, no la del túnel
+      const processFruit = proc.fruit || t.fruit;
 
       const entries = Object.entries(sensors) as [keyof SensorsShort, number | "OUT"][];
       entries.forEach(([key, value]) => {
@@ -62,7 +64,7 @@ export default function useAlerts(tunnels: TunnelLive[]) {
           list.push({
             id: `T${t.id}-${key}`,
             tunnel: t.id,
-            fruit: t.fruit,
+            fruit: processFruit, // 👈 usar la fruta del proceso activo
             sensor: label, // 👈 usamos el nombre legible
             value,
             status: st,
@@ -77,7 +79,7 @@ export default function useAlerts(tunnels: TunnelLive[]) {
   return alerts;
 }
 
-function safeGetProcess(tunnelId: number): { ranges?: Range } | null {
+function safeGetProcess(tunnelId: number): { ranges?: Range; fruit?: string } | null {
   try {
     const p = getProcess(tunnelId);
     return p;

@@ -17,20 +17,20 @@ export default function AlarmCenter({
   const [showAll, setShowAll] = useState(false);
 
   return (
-    <div className="fixed top-20 right-4 z-50 md:top-4">
-      {/* Botón campana */}
+    <div className="fixed top-20 right-2 sm:right-3 md:top-4 md:right-6 lg:right-8 xl:right-12 z-50">
+      {/* Botón campana - posición fija */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`relative group rounded-lg md:rounded-xl border px-2 py-2 md:px-4 md:py-3 transition-all duration-200 hover:scale-105 hover:shadow-lg ${
+        className={`relative group rounded-lg md:rounded-xl border px-2 py-2 sm:px-3 sm:py-2 md:px-3 md:py-2 lg:px-4 lg:py-3 transition-all duration-200 hover:scale-105 hover:shadow-lg ${
           open 
             ? "border-green-500 bg-green-900/20 text-white" 
             : "border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-100 hover:text-white"
         }`}
         aria-label="Ver alarmas"
       >
-        <div className="flex items-center gap-1 md:gap-2">
-          <div className="text-sm md:text-lg">{open ? "🔔" : "🔕"}</div>
-          <span className="text-xs md:text-sm font-medium hidden sm:inline">Alarmas</span>
+        <div className="flex items-center gap-1 md:gap-1.5 lg:gap-2">
+          <div className="text-sm md:text-base lg:text-lg">{open ? "🔔" : "🔕"}</div>
+          <span className="text-xs md:text-xs lg:text-sm font-medium hidden xl:inline">Alarmas</span>
         </div>
         {(allAlerts.length > 0 || newAlarms.length > 0) && (
           <span className={`absolute -top-1 -right-1 md:-top-2 md:-right-2 text-[10px] md:text-xs rounded-full px-1.5 py-0.5 md:px-2 md:py-1 font-bold shadow-lg ${
@@ -43,9 +43,9 @@ export default function AlarmCenter({
         )}
       </button>
 
-      {/* Panel */}
+      {/* Panel - se abre hacia la izquierda */}
       {open && (allAlerts.length > 0 || newAlarms.length > 0) && (
-        <div className="mt-3 w-[320px] sm:w-[400px] max-w-[90vw] rounded-xl border border-slate-600/50 bg-slate-900/95 backdrop-blur-sm p-3 sm:p-4 shadow-2xl">
+        <div className="absolute top-full right-0 mt-3 w-[280px] sm:w-[320px] md:w-[360px] lg:w-[400px] max-w-[90vw] rounded-xl border border-slate-600/50 bg-slate-900/95 backdrop-blur-sm p-3 sm:p-4 shadow-2xl">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${

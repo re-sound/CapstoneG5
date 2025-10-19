@@ -1,42 +1,150 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type Role = "admin" | "operador" | "observador";
-export type Session = { name: string; role: Role } | null;
+interface User {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  role_id: number;
+  last_login?: string;
+  last_logout?: string;
+}
 
-type Ctx = {
-  session: Session;
-  login: (name: string, role: Role) => void;
-  logout: () => void;
-};
+interface Session {
+  token: string;
+  login_time: string;
+}
 
-const AuthContext = createContext<Ctx | null>(null);
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  login: (user_id: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  loading: boolean;
+  isAuthenticated: boolean;
+}
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const API_BASE = 'http://localhost:4000';
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Verificar si hay una sesión guardada al cargar la app
   useEffect(() => {
-    const raw = localStorage.getItem("atreu_session");
-    if (raw) setSession(JSON.parse(raw));
+    const savedToken = localStorage.getItem('auth_token');
+    if (savedToken) {
+      validateSession(savedToken);
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const value = useMemo<Ctx>(() => ({
-    session,
-    login: (name, role) => {
-      const s: Session = { name, role };
-      setSession(s);
-      localStorage.setItem("atreu_session", JSON.stringify(s));
-    },
-    logout: () => {
-      setSession(null);
-      localStorage.removeItem("atreu_session");
-    },
-  }), [session]);
+  const validateSession = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setSession({
+          token,
+          login_time: data.session.login_time
+        });
+      } else {
+        // Token inválido, limpiar datos
+        localStorage.removeItem('auth_token');
+        setUser(null);
+        setSession(null);
+      }
+    } catch (error) {
+      console.error('Error validando sesión:', error);
+      localStorage.removeItem('auth_token');
+      setUser(null);
+      setSession(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (user_id: string, password: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_id, password })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUser(data.user);
+        setSession(data.session);
+        localStorage.setItem('auth_token', data.session.token);
+        return true;
+      } else {
+        console.error('Error de login:', data.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error en login:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      if (session?.token) {
+        await fetch(`${API_BASE}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.token}`
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error en logout:', error);
+    } finally {
+      // Limpiar datos locales independientemente del resultado del servidor
+      localStorage.removeItem('auth_token');
+      setUser(null);
+      setSession(null);
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    session,
+    login,
+    logout,
+    loading,
+    isAuthenticated: !!user && !!session
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+  }
+  return context;
 }
