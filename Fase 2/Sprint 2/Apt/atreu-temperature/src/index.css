@@ -15,7 +15,7 @@
   --brand-900: #2c5107;
 
   /* Neutros oscuros para fondo */
-  --bg-primary:   #0c1114;   /* Fondo principal */
+  --bg-primary:   #0c111469;
   --bg-secondary: #0f1518;   /* Fondo secundario */
   --bg-card:      #10171a;   /* Fondo de tarjetas */
   --bg-elevated:  #0f181a;   /* Fondo elevado */
@@ -57,7 +57,8 @@ body {
   line-height: 1.6;
   font-weight: 400;
   color: var(--text-primary);
-  background: var(--bg-primary);
+  background: url('src/fondo.jpg') no-repeat ;
+  background-size: 300vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
