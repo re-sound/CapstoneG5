@@ -1,5 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import LogoutButton from "./LogoutButton";
 
 export default function Topbar() {
   const { session, logout } = useAuth();
@@ -91,23 +92,7 @@ export default function Topbar() {
         </nav>
 
         {/* Usuario y logout */}
-        <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-          <div className="text-xs sm:text-sm text-green-200 hidden sm:block">
-            <span className="font-medium text-white">{session?.name}</span>
-            <span className="mx-1 sm:mx-2">•</span>
-            <span className="capitalize">{session?.role}</span>
-          </div>
-          <div className="text-xs text-green-200 sm:hidden">
-            <span className="font-medium text-white">{session?.name?.split(' ')[0]}</span>
-          </div>
-          <button 
-            onClick={logout} 
-            className="px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-green-100 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 rounded-lg border border-slate-600 hover:border-slate-500 transition-all duration-200"
-          >
-            <span className="hidden sm:inline">Salir</span>
-            <span className="sm:hidden">X</span>
-          </button>
-        </div>
+        <LogoutButton />
       </div>
     </header>
   );
