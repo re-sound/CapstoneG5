@@ -11,6 +11,13 @@ import {
   getProcessHistory,
   insertProcessHistory
 } from "./supabase-db-real.js";
+import { 
+  getActiveAlerts, 
+  getAlertsByTunnel, 
+  acknowledgeAlert, 
+  resolveAlert, 
+  getAlertStats 
+} from "./alerts-supabase.js";
 
 const app = express();
 app.use(cors());
@@ -358,6 +365,69 @@ app.get("/api/processes/:tunnelId/history", async (req, res) => {
     res.json(history);
   } catch (error) {
     console.error('Error en GET /api/processes/:tunnelId/history:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ===== ENDPOINTS DE ALERTAS =====
+
+// GET /api/alerts → alertas activas
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const alerts = await getActiveAlerts();
+    res.json(alerts);
+  } catch (error) {
+    console.error('Error en GET /api/alerts:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /api/alerts/tunnel/:tunnelId → alertas por túnel
+app.get("/api/alerts/tunnel/:tunnelId", async (req, res) => {
+  try {
+    const tunnelId = Number(req.params.tunnelId);
+    const alerts = await getAlertsByTunnel(tunnelId);
+    res.json(alerts);
+  } catch (error) {
+    console.error('Error en GET /api/alerts/tunnel/:tunnelId:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// POST /api/alerts/:alertId/acknowledge → reconocer alerta
+app.post("/api/alerts/:alertId/acknowledge", async (req, res) => {
+  try {
+    const alertId = req.params.alertId;
+    const { acknowledged_by = "Sistema" } = req.body;
+    
+    const alert = await acknowledgeAlert(alertId, acknowledged_by);
+    res.json(alert);
+  } catch (error) {
+    console.error('Error en POST /api/alerts/:alertId/acknowledge:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// POST /api/alerts/:alertId/resolve → resolver alerta
+app.post("/api/alerts/:alertId/resolve", async (req, res) => {
+  try {
+    const alertId = req.params.alertId;
+    
+    const alert = await resolveAlert(alertId);
+    res.json(alert);
+  } catch (error) {
+    console.error('Error en POST /api/alerts/:alertId/resolve:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /api/alerts/stats → estadísticas de alertas
+app.get("/api/alerts/stats", async (req, res) => {
+  try {
+    const stats = await getAlertStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error en GET /api/alerts/stats:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

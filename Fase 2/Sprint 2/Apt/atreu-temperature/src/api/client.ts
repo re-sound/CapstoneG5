@@ -143,3 +143,66 @@ export async function apiGetProcessHistory(tunnelId: number): Promise<any[]> {
   if (!r.ok) throw new Error("Error al obtener historial de procesos");
   return r.json();
 }
+
+// --- Alertas ---
+export type AlertDto = {
+  id: string;
+  reading_id: string | null;
+  tunnel_id: number;
+  process_id: string | null;
+  alert_time: string;
+  alert_type: 'warning' | 'alarm';
+  sensor_name: string;
+  alert_value: number;
+  threshold_value: number;
+  acknowledged: boolean;
+  acknowledged_by: string | null;
+  acknowledged_at: string | null;
+  resolved: boolean;
+  resolved_at: string | null;
+  created_at: string;
+};
+
+export type AlertStats = {
+  total: number;
+  active: number;
+  acknowledged: number;
+  resolved: number;
+  byType: { warning: number; alarm: number };
+};
+
+export async function apiGetAlerts(): Promise<AlertDto[]> {
+  const r = await fetch(`${BASE}/api/alerts`);
+  if (!r.ok) throw new Error("Error al obtener alertas");
+  return r.json();
+}
+
+export async function apiGetAlertsByTunnel(tunnelId: number): Promise<AlertDto[]> {
+  const r = await fetch(`${BASE}/api/alerts/tunnel/${tunnelId}`);
+  if (!r.ok) throw new Error("Error al obtener alertas del túnel");
+  return r.json();
+}
+
+export async function apiAcknowledgeAlert(alertId: string, acknowledgedBy: string = "Sistema"): Promise<AlertDto> {
+  const r = await fetch(`${BASE}/api/alerts/${alertId}/acknowledge`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ acknowledged_by: acknowledgedBy }),
+  });
+  if (!r.ok) throw new Error("Error al reconocer alerta");
+  return r.json();
+}
+
+export async function apiResolveAlert(alertId: string): Promise<AlertDto> {
+  const r = await fetch(`${BASE}/api/alerts/${alertId}/resolve`, {
+    method: "POST",
+  });
+  if (!r.ok) throw new Error("Error al resolver alerta");
+  return r.json();
+}
+
+export async function apiGetAlertStats(): Promise<AlertStats> {
+  const r = await fetch(`${BASE}/api/alerts/stats`);
+  if (!r.ok) throw new Error("Error al obtener estadísticas de alertas");
+  return r.json();
+}

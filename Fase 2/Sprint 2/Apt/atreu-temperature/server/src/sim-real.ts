@@ -1,4 +1,5 @@
-import { insertReading } from "./supabase-db-real.js";
+import { insertReading, getProcess } from "./supabase-db-real.js";
+import { processReadingForAlerts } from "./alerts-supabase.js";
 
 /**
  * Simulador de datos para Supabase (esquema real)
@@ -101,9 +102,19 @@ async function seedOne(tunnelId: number) {
   };
 
   try {
-    await insertReading({
+    // 1. Verificar si existe un proceso activo para este túnel
+    const process = await getProcess(tunnelId);
+    
+    // 2. Solo procesar si hay un proceso activo
+    if (!process) {
+      console.log(`⏸️  Túnel ${tunnelId}: Sin proceso activo, saltando lectura`);
+      return;
+    }
+
+    // 3. Insertar lectura asociada al proceso
+    const reading = await insertReading({
       tunnel_id: tunnelId,
-      process_id: null, // Por ahora null, se puede asociar después
+      process_id: process.id,
       ts: now,
       amb_out: values.ambOut,
       amb_ret: values.ambRet,
@@ -115,16 +126,44 @@ async function seedOne(tunnelId: number) {
       izq_int_sal: values.izqIntSal,
       der_int_sal: values.derIntSal,
       der_ext_sal: values.derExtSal,
-      fruit: null,
-      min_temp: null,
-      max_temp: null,
-      ideal_min: null,
-      ideal_max: null
+      fruit: process.fruit,
+      min_temp: process.min_temp,
+      max_temp: process.max_temp,
+      ideal_min: process.ideal_min,
+      ideal_max: process.ideal_max
     });
 
-    // Log para debugging (opcional)
+    // 4. Procesar alertas con el proceso asociado y sus umbrales
+    const alerts = await processReadingForAlerts(
+      reading.id,
+      tunnelId,
+      process.id,
+      process.fruit,
+      {
+        amb_out: values.ambOut,
+        amb_ret: values.ambRet,
+        izq_ext_ent: values.izqExtEnt,
+        izq_int_ent: values.izqIntEnt,
+        der_int_ent: values.derIntEnt,
+        der_ext_ent: values.derExtEnt,
+        izq_ext_sal: values.izqExtSal,
+        izq_int_sal: values.izqIntSal,
+        der_int_sal: values.derIntSal,
+        der_ext_sal: values.derExtSal
+      },
+      {
+        min_temp: process.min_temp,
+        max_temp: process.max_temp
+      }
+    );
+
+    // Log para debugging
     if (isAnomalous) {
       console.log(`⚠️  Túnel ${tunnelId}: Lectura anómala generada (AMB_OUT: ${values.ambOut}°C)`);
+    }
+    
+    if (alerts.length > 0) {
+      console.log(`🚨 Túnel ${tunnelId}: ${alerts.length} alertas generadas`);
     }
   } catch (error) {
     console.error(`❌ Error insertando lectura para túnel ${tunnelId}:`, error);
@@ -134,6 +173,8 @@ async function seedOne(tunnelId: number) {
 console.log("🔄 Simulador Supabase Real ON - Generando lecturas cada ~40s");
 console.log("📊 Rango de temperaturas: 3°C - 15°C");
 console.log("⚠️  20% de probabilidad de datos anómalos por ciclo");
+console.log("🚨 Sistema de alertas activado (solo para procesos activos)");
+console.log("⏸️  Solo procesa túneles con procesos activos");
 console.log("🔗 Base de datos: Supabase (Esquema Real)");
 console.log("---");
 
