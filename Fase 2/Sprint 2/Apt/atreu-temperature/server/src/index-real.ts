@@ -7,6 +7,7 @@ import {
   getAllProcesses,
   getProcess,
   createProcess,
+  updateProcess,
   updateProcessByTunnel,
   getProcessHistory,
   insertProcessHistory
@@ -194,22 +195,25 @@ app.get("/api/processes/:tunnelId", async (req, res) => {
 });
 
 // POST /api/processes/:tunnelId/start → iniciar proceso
-app.post("/api/processes/:tunnelId/start", async (req, res) => {
+app.post("/api/processes/:tunnelId/start", requireAuth, async (req, res) => {
   try {
     const tunnelId = Number(req.params.tunnelId);
     const now = new Date().toISOString();
+    const userId = req.user.id; // Usuario actual autenticado
     const {
       fruit,
       min_temp,
       max_temp,
       ideal_min,
       ideal_max,
-      started_by = "Operador",
       measure_plan = 15,
       destination = "",
       origin = "",
-      condition_initial = ""
+      condition_initial = "",
+      description = ""
     } = req.body;
+
+    console.log(`🔄 Iniciando proceso en túnel ${tunnelId} por usuario ${userId}`);
 
     // Verificar si ya existe un proceso activo
     const existingProcess = await getProcess(tunnelId);
@@ -227,16 +231,18 @@ app.post("/api/processes/:tunnelId/start", async (req, res) => {
       ideal_max,
       started_at: now,
       ended_at: null,
-      started_by: null, // Por ahora null, se puede asociar con usuario después
+      started_by: userId, // Usuario que inicia el proceso
       ended_by: null,
       measure_plan,
       destination,
       origin,
       condition_initial,
-      description: null,
-      state_label: "Ocupado",
+      description,
+      state_label: "En curso",
       last_change: now
     });
+
+    console.log(`✅ Proceso creado con ID: ${newProcess.id}`);
 
     res.json({ ok: true, tunnelId, status: "running", processId: newProcess.id });
   } catch (error) {
@@ -316,11 +322,11 @@ app.post("/api/processes/:tunnelId/resume", async (req, res) => {
 });
 
 // POST /api/processes/:tunnelId/finalize → finalizar proceso
-app.post("/api/processes/:tunnelId/finalize", async (req, res) => {
+app.post("/api/processes/:tunnelId/finalize", requireAuth, async (req, res) => {
   try {
     const tunnelId = Number(req.params.tunnelId);
-    const { ended_by = "Operador" } = req.body;
     const now = new Date().toISOString();
+    const userId = req.user.id; // Usuario actual autenticado
 
     // Obtener proceso actual
     const process = await getProcess(tunnelId);
@@ -329,8 +335,10 @@ app.post("/api/processes/:tunnelId/finalize", async (req, res) => {
       return res.status(404).json({ error: "Proceso no encontrado" });
     }
 
+    console.log(`📝 Guardando proceso en historial - Túnel: ${tunnelId}, Usuario: ${userId}`);
+
     // Guardar en historial
-    await insertProcessHistory({
+    const historyEntry = await insertProcessHistory({
       tunnel_id: tunnelId,
       fruit: process.fruit,
       min_temp: process.min_temp,
@@ -340,7 +348,7 @@ app.post("/api/processes/:tunnelId/finalize", async (req, res) => {
       started_at: process.started_at || now,
       ended_at: now,
       started_by: process.started_by,
-      ended_by: null, // Por ahora null, se puede asociar con usuario después
+      ended_by: userId, // Usuario que finaliza el proceso
       measure_plan: process.measure_plan,
       destination: process.destination,
       origin: process.origin,
@@ -351,15 +359,21 @@ app.post("/api/processes/:tunnelId/finalize", async (req, res) => {
         null
     });
 
+    console.log(`✅ Proceso guardado en historial con ID: ${historyEntry.id}`);
+
     // Marcar proceso como finalizado
-    await updateProcess(process.id, {
+    console.log(`🔄 Finalizando proceso ${process.id} del túnel ${tunnelId}`);
+    
+    const updatedProcess = await updateProcess(process.id, {
       status: "finished",
       ended_at: now,
       ended_by: null, // Por ahora null
       last_change: now
     });
 
-    res.json({ ok: true, status: "finished" });
+    console.log(`✅ Proceso ${process.id} finalizado correctamente. Estado: ${updatedProcess.status}`);
+
+    res.json({ ok: true, status: "finished", process: updatedProcess });
   } catch (error) {
     console.error('Error en POST /api/processes/:tunnelId/finalize:', error);
     res.status(500).json({ error: 'Error interno del servidor' });

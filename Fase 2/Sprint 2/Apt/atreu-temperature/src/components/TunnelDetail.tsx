@@ -15,14 +15,13 @@ import {
   type TunnelProcess,
   getProcess,
   subscribe,
-  startProcess,
   updateRanges,
   updateProcessInfo,
   pauseProcess,
   resumeProcess,
-  finalizeProcess,
 } from "../state/processStore";
-import { type HistoryRow } from "../api/client";
+import { apiStartProcess, apiFinalizeProcess, type HistoryRow } from "../api/client";
+import * as processStore from "../state/processStore";
 import { useHistoryData } from "../hooks/useHistoryData";
 
 /* ----------------------------------------------------------------
@@ -69,6 +68,69 @@ function pushHistory(tunnelId: number, item: HistoryItem) {
   list.unshift(item); // último primero
   localStorage.setItem(HISTORY_KEY(tunnelId), JSON.stringify(list));
 }
+
+/* ----------------------------------------------------------------
+   Funciones para manejar procesos con el backend
+------------------------------------------------------------------*/
+const startProcessAction = async (
+  tunnelId: number,
+  payload: {
+    fruit: Fruit;
+    ranges: Range;
+    startedBy?: string;
+    startedAt?: string;
+    measurePlan?: MeasurePlan;
+    destination?: string;
+    conditionInitial?: string;
+    origin?: string;
+    description?: string;
+  }
+) => {
+  console.log('🔄 Iniciando proceso en backend...', { tunnelId, payload });
+  
+  try {
+    // Llamar a la API del backend
+    const result = await apiStartProcess(tunnelId, {
+      fruit: payload.fruit,
+      min_temp: payload.ranges.min,
+      max_temp: payload.ranges.max,
+      ideal_min: payload.ranges.idealMin,
+      ideal_max: payload.ranges.idealMax,
+      measure_plan: payload.measurePlan,
+      destination: payload.destination,
+      origin: payload.origin,
+      condition_initial: payload.conditionInitial,
+      description: payload.description
+    });
+
+    console.log('✅ Proceso iniciado en backend:', result);
+
+    // Actualizar el store local
+    processStore.startProcess(tunnelId, payload);
+    
+  } catch (error) {
+    console.error('❌ Error iniciando proceso:', error);
+    throw error;
+  }
+};
+
+const finalizeProcessAction = async (tunnelId: number, endedBy: string) => {
+  console.log('🏁 Finalizando proceso en backend...', { tunnelId, endedBy });
+  
+  try {
+    // Llamar a la API del backend
+    const result = await apiFinalizeProcess(tunnelId, endedBy);
+    
+    console.log('✅ Proceso finalizado en backend:', result);
+
+    // Actualizar el store local
+    processStore.finalizeProcess(tunnelId, endedBy);
+    
+  } catch (error) {
+    console.error('❌ Error finalizando proceso:', error);
+    throw error;
+  }
+};
 
 /* ----------------------------------------------------------------
    Componente principal (Modal)
@@ -402,18 +464,25 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
         <div className="flex flex-wrap gap-2">
           {process.status === "idle" && (
             <button
-              onClick={() =>
-                startProcess(tunnelId, {
-                  fruit,
-                  ranges,
-                  startedAt,
-                  startedBy: startedBy || "Operador",
-                  measurePlan,
-                  destination,
-                  conditionInitial,
-                  origin,
-                })
-              }
+              onClick={async () => {
+                try {
+                  await startProcessAction(tunnelId, {
+                    fruit,
+                    ranges,
+                    startedAt,
+                    startedBy: startedBy || "Operador",
+                    measurePlan,
+                    destination,
+                    conditionInitial,
+                    origin,
+                    description: `Proceso iniciado por ${startedBy || "Operador"}`
+                  });
+                  console.log("✅ Proceso iniciado exitosamente");
+                } catch (error) {
+                  console.error("❌ Error iniciando proceso:", error);
+                  alert("Error al iniciar el proceso. Revisa la consola para más detalles.");
+                }
+              }}
               className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500"
             >
               Iniciar proceso
@@ -422,7 +491,15 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 
           {process.status === "running" && (
             <>
-              <button onClick={() => pauseProcess(tunnelId)} className="px-3 py-2 rounded bg-amber-600 hover:bg-amber-500">Pausar</button>
+              <button 
+                onClick={() => {
+                  pauseProcess(tunnelId);
+                  console.log("✅ Proceso pausado exitosamente");
+                }} 
+                className="px-3 py-2 rounded bg-amber-600 hover:bg-amber-500"
+              >
+                Pausar
+              </button>
               <button
                 onClick={() => {
                   updateRanges(tunnelId, ranges);
@@ -437,7 +514,15 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 
           {process.status === "paused" && (
             <>
-              <button onClick={() => resumeProcess(tunnelId)} className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500">Continuar</button>
+              <button 
+                onClick={() => {
+                  resumeProcess(tunnelId);
+                  console.log("✅ Proceso reanudado exitosamente");
+                }} 
+                className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
+              >
+                Continuar
+              </button>
               <button
                 onClick={() => {
                   updateRanges(tunnelId, ranges);
@@ -464,25 +549,36 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                 />
               </Field>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!endedBy.trim()) {
                     alert("Ingresa quién finaliza el proceso.");
                     return;
                   }
-                  const endedAtNow = new Date().toISOString();
-                  pushHistory(tunnelId, {
-                    id: `${tunnelId}-${endedAtNow}`,
-                    startedAt: process.startedAt ?? endedAtNow,
-                    endedAt: endedAtNow,
-                    fruit: process.fruit,
-                    ranges: process.ranges,
-                    endedBy: endedBy.trim(),
-                  });
-                  // Finaliza en el store
-                  finalizeProcess(tunnelId, endedBy.trim());
-                  // refresca vista
-                  setHistory(loadHistory(tunnelId));
-                  setEndedBy("");
+                  
+                  try {
+                    // Finaliza en el backend y store
+                    await finalizeProcessAction(tunnelId, endedBy.trim());
+                    
+                    // Actualizar historial local
+                    const endedAtNow = new Date().toISOString();
+                    pushHistory(tunnelId, {
+                      id: `${tunnelId}-${endedAtNow}`,
+                      startedAt: process.startedAt ?? endedAtNow,
+                      endedAt: endedAtNow,
+                      fruit: process.fruit,
+                      ranges: process.ranges,
+                      endedBy: endedBy.trim(),
+                    });
+                    
+                    // refresca vista
+                    setHistory(loadHistory(tunnelId));
+                    setEndedBy("");
+                    
+                    console.log("✅ Proceso finalizado exitosamente");
+                  } catch (error) {
+                    console.error("❌ Error finalizando proceso:", error);
+                    alert("Error al finalizar el proceso. Revisa la consola para más detalles.");
+                  }
                 }}
                 className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500"
               >
