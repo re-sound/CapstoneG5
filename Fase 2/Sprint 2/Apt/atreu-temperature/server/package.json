@@ -6,12 +6,21 @@
         "dev:api": "tsx src/index.ts",
         "dev:sim": "tsx src/sim.ts",
         "dev": "npm-run-all -p dev:api dev:sim",
+        "dev:supabase": "tsx src/index-supabase.ts",
+        "dev:sim-supabase": "tsx src/sim-supabase.ts",
+        "dev:supabase-full": "npm-run-all -p dev:supabase dev:sim-supabase",
+        "dev:real": "tsx src/index-real.ts",
+        "dev:sim-real": "tsx src/sim-real.ts",
+        "dev:real-full": "npm-run-all -p dev:real dev:sim-real",
+        "migrate": "tsx src/migrate-to-supabase.ts",
+        "setup": "tsx src/setup-supabase.ts",
         "start": "node --enable-source-maps dist/index.js",
         "build": "tsc -p tsconfig.json"
     },
     "dependencies": {
-        "better-sqlite3": "^9.6.0",
+        "@supabase/supabase-js": "^2.39.0",
         "cors": "^2.8.5",
+        "dotenv": "^17.2.3",
         "express": "^4.21.2"
     },
     "devDependencies": {
