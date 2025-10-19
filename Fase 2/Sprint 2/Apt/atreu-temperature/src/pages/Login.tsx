@@ -3,23 +3,28 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loading } = useAuth();
   const nav = useNavigate();
-  const [name, setName] = useState("admin");
-  const [pwd, setPwd] = useState("1234");
-  const [isLoading, setIsLoading] = useState(false);
+  const [user_id, setUserId] = useState("admin");
+  const [password, setPassword] = useState("admin");
+  const [error, setError] = useState("");
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setIsLoading(true);
+    setError("");
+
+    if (!user_id || !password) {
+      setError("Por favor completa todos los campos");
+      return;
+    }
+
+    const success = await login(user_id, password);
     
-    // Simular carga
-    setTimeout(() => {
-      // demo: rol según nombre
-      const role = name === "admin" ? "admin" : name === "operador" ? "operador" : "observador";
-      login(name, role as any);
+    if (success) {
       nav("/dashboard", { replace: true });
-    }, 1000);
+    } else {
+      setError("Credenciales inválidas. Usa admin:admin");
+    }
   }
 
   return (
@@ -62,10 +67,10 @@ export default function Login() {
                   </svg>
                 </div>
                 <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={user_id}
+                  onChange={(e) => setUserId(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="admin, operador, observador"
+                  placeholder="admin"
                   required
                 />
               </div>
@@ -83,23 +88,30 @@ export default function Login() {
                   </svg>
                 </div>
                 <input
-                  value={pwd}
-                  onChange={(e) => setPwd(e.target.value)}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   type="password"
                   className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Contraseña de demostración"
+                  placeholder="admin"
                   required
                 />
               </div>
             </div>
 
+            {/* Mensaje de error */}
+            {error && (
+              <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3">
+                <p className="text-red-200 text-sm">{error}</p>
+              </div>
+            )}
+
             {/* Botón de envío */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loading}
               className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center justify-center gap-2"
             >
-              {isLoading ? (
+              {loading ? (
                 <>
                   <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

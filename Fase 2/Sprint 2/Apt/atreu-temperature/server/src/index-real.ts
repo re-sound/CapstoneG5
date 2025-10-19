@@ -18,6 +18,16 @@ import {
   resolveAlert, 
   getAlertStats 
 } from "./alerts-supabase.js";
+import { 
+  validateCredentials, 
+  createUserSession, 
+  updateLastLogin, 
+  validateSessionToken, 
+  closeUserSession, 
+  closeAllUserSessions, 
+  getActiveUserSessions,
+  requireAuth 
+} from "./auth-supabase.js";
 
 const app = express();
 app.use(cors());
@@ -366,6 +376,154 @@ app.get("/api/processes/:tunnelId/history", async (req, res) => {
   } catch (error) {
     console.error('Error en GET /api/processes/:tunnelId/history:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ===== ENDPOINTS DE AUTENTICACIÓN =====
+
+// POST /api/auth/login → iniciar sesión
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { user_id, password } = req.body;
+
+    if (!user_id || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'user_id y password son requeridos' 
+      });
+    }
+
+    // Validar credenciales
+    const user = await validateCredentials({ user_id, password });
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Credenciales inválidas' 
+      });
+    }
+
+    // Crear sesión
+    const session = await createUserSession(user, req);
+    
+    // Actualizar last_login
+    await updateLastLogin(user.id);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        user_id: user.user_id,
+        full_name: user.full_name,
+        email: user.email,
+        role_id: user.role_id
+      },
+      session: {
+        token: session.session_token,
+        login_time: session.login_time
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en POST /api/auth/login:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Error interno del servidor' 
+    });
+  }
+});
+
+// POST /api/auth/logout → cerrar sesión
+app.post("/api/auth/logout", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Token de sesión requerido' 
+      });
+    }
+
+    await closeUserSession(token);
+
+    res.json({
+      success: true,
+      message: 'Sesión cerrada correctamente'
+    });
+
+  } catch (error) {
+    console.error('Error en POST /api/auth/logout:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Error interno del servidor' 
+    });
+  }
+});
+
+// GET /api/auth/me → obtener información del usuario actual
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user.id,
+      user_id: req.user.user_id,
+      full_name: req.user.full_name,
+      email: req.user.email,
+      role_id: req.user.role_id,
+      last_login: req.user.last_login,
+      last_logout: req.user.last_logout
+    },
+    session: {
+      id: req.session.id,
+      login_time: req.session.login_time,
+      ip_address: req.session.ip_address,
+      device_info: req.session.device_info
+    }
+  });
+});
+
+// GET /api/auth/sessions → obtener sesiones activas del usuario
+app.get("/api/auth/sessions", requireAuth, async (req, res) => {
+  try {
+    const sessions = await getActiveUserSessions(req.user.id);
+    
+    res.json({
+      success: true,
+      sessions: sessions.map(session => ({
+        id: session.id,
+        login_time: session.login_time,
+        ip_address: session.ip_address,
+        device_info: session.device_info,
+        status: session.status
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error en GET /api/auth/sessions:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Error interno del servidor' 
+    });
+  }
+});
+
+// POST /api/auth/logout-all → cerrar todas las sesiones
+app.post("/api/auth/logout-all", requireAuth, async (req, res) => {
+  try {
+    await closeAllUserSessions(req.user.id);
+    
+    res.json({
+      success: true,
+      message: 'Todas las sesiones cerradas correctamente'
+    });
+
+  } catch (error) {
+    console.error('Error en POST /api/auth/logout-all:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Error interno del servidor' 
+    });
   }
 });
 
