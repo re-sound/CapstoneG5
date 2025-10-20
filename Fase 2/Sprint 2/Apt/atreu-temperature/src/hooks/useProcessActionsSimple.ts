@@ -1,5 +1,5 @@
 // src/hooks/useProcessActionsSimple.ts
-import { apiStartProcess, apiPauseProcess, apiResumeProcess, apiFinalizeProcess } from "../api/client";
+import { apiStartProcess, apiFinalizeProcess } from "../api/client";
 import * as processStore from "../state/processStore";
 
 /**
