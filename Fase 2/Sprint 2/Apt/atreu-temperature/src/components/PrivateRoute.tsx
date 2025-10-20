@@ -9,11 +9,14 @@ export default function PrivateRoute({
   children: React.ReactNode;
   roles?: Array<"admin" | "operador" | "observador">;
 }) {
-  const { session } = useAuth();
+  const { user, session } = useAuth();
 
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session || !user) return <Navigate to="/login" replace />;
 
-  if (roles && !roles.includes(session.role)) {
+  // Mapear role_id a string para verificación
+  const userRole = user.role_id === 1 ? "admin" : user.role_id === 2 ? "operador" : "observador";
+
+  if (roles && !roles.includes(userRole as "admin" | "operador" | "observador")) {
     return <Navigate to="/dashboard" replace />;
   }
 
