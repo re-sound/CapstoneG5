@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Configuración de Supabase
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL);
 const supabaseUrl = process.env.SUPABASE_URL || 'YOUR_SUPABASE_URL';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'YOUR_SERVICE_ROLE_KEY';
