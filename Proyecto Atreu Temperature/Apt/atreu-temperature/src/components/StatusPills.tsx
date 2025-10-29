@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import { getProcess, subscribe, ProcessStatus } from "../state/processStore";
 
 function pill(kind: ProcessStatus) {
-  if (kind === "running") return "bg-emerald-600 text-white";
+  if (kind === "running") return "bg-red-500 text-white";
   if (kind === "paused") return "bg-amber-600 text-white";
   if (kind === "finished") return "bg-slate-600 text-white";
   return "bg-emerald-600 text-white"; // idle -> Disponible

@@ -32,10 +32,10 @@ const defaultProcessCache = new Map<number, TunnelProcess>();
 const getDefaultProcess = (tunnelId: number): TunnelProcess => {
   if (!defaultProcessCache.has(tunnelId)) {
     defaultProcessCache.set(tunnelId, {
-      tunnelId, 
-      status: "idle" as const, 
-      fruit: "GENÉRICA" as const, 
-      ranges: { min: 0, max: 10, idealMin: 2, idealMax: 8 } 
+      tunnelId,
+      status: "idle" as const,
+      fruit: "GENÉRICA" as const,
+      ranges: { min: 0, max: 10, idealMin: 2, idealMax: 8 }
     });
   }
   return defaultProcessCache.get(tunnelId)!;
@@ -87,7 +87,7 @@ const startProcessAction = async (
   }
 ) => {
   console.log('🔄 Iniciando proceso en backend...', { tunnelId, payload });
-  
+
   try {
     // Llamar a la API del backend
     const result = await apiStartProcess(tunnelId, {
@@ -107,7 +107,7 @@ const startProcessAction = async (
 
     // Actualizar el store local
     processStore.startProcess(tunnelId, payload);
-    
+
   } catch (error) {
     console.error('❌ Error iniciando proceso:', error);
     throw error;
@@ -116,16 +116,16 @@ const startProcessAction = async (
 
 const finalizeProcessAction = async (tunnelId: number, endedBy: string) => {
   console.log('🏁 Finalizando proceso en backend...', { tunnelId, endedBy });
-  
+
   try {
     // Llamar a la API del backend
     const result = await apiFinalizeProcess(tunnelId, endedBy);
-    
+
     console.log('✅ Proceso finalizado en backend:', result);
 
     // Actualizar el store local
     processStore.finalizeProcess(tunnelId, endedBy);
-    
+
   } catch (error) {
     console.error('❌ Error finalizando proceso:', error);
     throw error;
@@ -145,7 +145,7 @@ export default function TunnelDetail({
   onClose: () => void;
 }) {
   const tun = TUNELES_MOCK.find((t) => t.id === tunnelId)!;
-  
+
   const process = useSyncExternalStore(
     subscribe,
     () => getProcess(tunnelId) || getDefaultProcess(tunnelId),
@@ -158,11 +158,13 @@ export default function TunnelDetail({
 
   const tabs: TabItem[] = [
     { key: "temperaturas", label: "Temperaturas", content: <ResumenTemperaturas tunnelId={tunnelId} historico={historico} /> },
-    { key: "grafico", label: "Gráfico", content: histLoading
+    {
+      key: "grafico", label: "Gráfico", content: histLoading
         ? <div className="text-slate-400 text-sm p-2">Cargando…</div>
         : histError
           ? <div className="text-rose-400 text-sm p-2">Error: {histError.message}</div>
-          : <ChartTab historico={historico} /> },
+          : <ChartTab historico={historico} />
+    },
     { key: "procesos", label: "Procesos", content: <ProcesosPane tunnelId={tunnelId} /> },
     { key: "historico", label: "Histórico", content: <HistoricoTable historico={historico} tunnelId={tunnelId} /> },
   ];
@@ -291,6 +293,7 @@ function chipBg(status: ReturnType<typeof classifyTemp>) {
    Procesos — iniciar/pausar/continuar/guardar/finalizar + historial
 ------------------------------------------------------------------*/
 function ProcesosPane({ tunnelId }: { tunnelId: number }) {
+  const [formContraido, setFormContraido] = useState(false);
   const process = useSyncExternalStore(
     subscribe,
     () => getProcess(tunnelId) || getDefaultProcess(tunnelId),
@@ -300,7 +303,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   // formularios
   const [fruit, setFruit] = useState<Fruit>(process.fruit);
   const [ranges, setRanges] = useState<Range>(process.ranges);
-  const [startedAt, setStartedAt] = useState<string>(process.startedAt ?? new Date().toISOString().slice(0,16));
+  const [startedAt, setStartedAt] = useState<string>(process.startedAt ?? new Date().toISOString().slice(0, 16));
   const [measurePlan, setMeasurePlan] = useState<MeasurePlan>(process.measurePlan ?? 15);
   const [destination, setDestination] = useState(process.destination ?? "");
   const [startedBy, setStartedBy] = useState(process.startedBy ?? "");
@@ -318,7 +321,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
     prev.current = process;
     setFruit(process.fruit);
     setRanges(process.ranges);
-    setStartedAt(process.startedAt ?? new Date().toISOString().slice(0,16));
+    setStartedAt(process.startedAt ?? new Date().toISOString().slice(0, 16));
     setMeasurePlan(process.measurePlan ?? 15);
     setDestination(process.destination ?? "");
     setStartedBy(process.startedBy ?? "");
@@ -330,12 +333,12 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 
   const statusPill = (
     <span className={`inline-block text-xs px-2 py-1 rounded ${process.status === "running"
-      ? "bg-emerald-600 text-white"
+      ? "bg-red-500 text-white"
       : process.status === "paused"
-      ? "bg-amber-600 text-white"
-      : process.status === "finished"
-      ? "bg-slate-600 text-white"
-      : "bg-slate-700 text-slate-100"}`}>
+        ? "bg-amber-600 text-white"
+        : process.status === "finished"
+          ? "bg-slate-600 text-white"
+          : "bg-slate-700 text-slate-100"}`}>
       {process.status === "idle" && "Sin proceso"}
       {process.status === "running" && "En ejecución"}
       {process.status === "paused" && "Pausado"}
@@ -344,7 +347,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-4 pb-4">
       {/* Estado */}
       <div className="rounded-xl border border-slate-700/60 p-4 bg-slate-900/40 space-y-3">
         <div className="flex items-center justify-between">
@@ -378,216 +381,243 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
       </div>
 
       {/* Formulario: iniciar o actualizar */}
-      <div className="rounded-xl border border-slate-700/60 p-4 bg-slate-900/40 space-y-4">
-        <div className="font-semibold">{process.status === "idle" ? "Inicio de Proceso" : "Ajustes del Proceso"}</div>
+      {!formContraido && (
+        <div className="rounded-xl border border-slate-700/60 p-4 bg-slate-900/40 space-y-4">
+          <div className="font-semibold">{process.status === "idle" ? "Inicio de Proceso" : "Ajustes del Proceso"}</div>
 
-        <div className="grid lg:grid-cols-2 gap-4">
-          {/* Columna izquierda */}
-          <div className="grid gap-3">
-            <Field label="Especie (fruta)">
-              <select
-                value={fruit}
-                onChange={(e) => {
-                  const f = e.target.value as Fruit;
-                  setFruit(f);
-                  const def = defOf(f);
-                  setRanges({ min: def.min, max: def.max, idealMin: def.idealMin, idealMax: def.idealMax });
-                }}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
-              >
-                {Object.keys(RANGOS_POR_FRUTA).map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
-            </Field>
+          <div className="grid lg:grid-cols-2 gap-4">
+            {/* Columna izquierda */}
+            <div className="grid gap-3">
+              <Field label="Especie (fruta)">
+                <select
+                  value={fruit}
+                  onChange={(e) => {
+                    const f = e.target.value as Fruit;
+                    setFruit(f);
+                    const def = defOf(f);
+                    setRanges({ min: def.min, max: def.max, idealMin: def.idealMin, idealMax: def.idealMax });
+                  }}
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                >
+                  {Object.keys(RANGOS_POR_FRUTA).map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </Field>
 
-            <div className="rounded-lg border border-slate-700/60 p-3 bg-slate-900/30">
-              <div className="font-medium mb-2">Rangos (alarmas e ideal)</div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <NumberBox label="Mín. alarma" value={ranges.min} onChange={(v) => setRanges({ ...ranges, min: v })} />
-                <NumberBox label="Máx. alarma" value={ranges.max} onChange={(v) => setRanges({ ...ranges, max: v })} />
-                <NumberBox label="Ideal desde" value={ranges.idealMin} onChange={(v) => setRanges({ ...ranges, idealMin: v })} />
-                <NumberBox label="Ideal hasta" value={ranges.idealMax} onChange={(v) => setRanges({ ...ranges, idealMax: v })} />
-              </div>
-              <div className="text-xs text-slate-400 mt-2">
-                Al cambiar la fruta se restablecen los rangos por defecto de esa especie.
+              <div className="rounded-lg border border-slate-700/60 p-3 bg-slate-900/30">
+                <div className="font-medium mb-2">Rangos (alarmas e ideal)</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <NumberBox label="Mín. alarma" value={ranges.min} onChange={(v) => setRanges({ ...ranges, min: v })} />
+                  <NumberBox label="Máx. alarma" value={ranges.max} onChange={(v) => setRanges({ ...ranges, max: v })} />
+                  <NumberBox label="Ideal desde" value={ranges.idealMin} onChange={(v) => setRanges({ ...ranges, idealMin: v })} />
+                  <NumberBox label="Ideal hasta" value={ranges.idealMax} onChange={(v) => setRanges({ ...ranges, idealMax: v })} />
+                </div>
+                <div className="text-xs text-slate-400 mt-2">
+                  Al cambiar la fruta se restablecen los rangos por defecto de esa especie.
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Columna derecha (campos “clásicos”) */}
-          <div className="grid gap-3">
-            <Field label="Fecha inicio">
-              <input
-                type="datetime-local"
-                value={toLocalInputValue(startedAt)}
-                onChange={(e) => setStartedAt(fromLocalInputValue(e.target.value))}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
-              />
-            </Field>
-
-            <Field label="Mediciones">
-              <select
-                value={measurePlan}
-                onChange={(e) => setMeasurePlan(Number(e.target.value) as MeasurePlan)}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
-              >
-                <option value={15}>Cada 15 min</option>
-                <option value={5}>Cada 5 min</option>
-                <option value={1}>Cada 1 min</option>
-              </select>
-            </Field>
-
-            <Field label="Destino">
-              <input value={destination} onChange={(e) => setDestination(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
-            </Field>
-
-            <Field label="Operador inicial">
-              <input value={startedBy} onChange={(e) => setStartedBy(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
-            </Field>
-
-            <Field label="Condición inicial">
-              <textarea value={conditionInitial} onChange={(e) => setConditionInitial(e.target.value)} className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 py-2" />
-            </Field>
-
-            <Field label="Origen">
-              <input value={origin} onChange={(e) => setOrigin(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
-            </Field>
-
-            <Field label="Estado">
-              <input disabled value={process.status === "idle" ? "Libre" : "Ocupado"} className="w-full rounded border border-slate-800 bg-slate-800/60 px-3 py-2" />
-            </Field>
-          </div>
-        </div>
-
-        {/* Acciones */}
-        <div className="flex flex-wrap gap-2">
-          {process.status === "idle" && (
-            <button
-              onClick={async () => {
-                try {
-                  await startProcessAction(tunnelId, {
-                    fruit,
-                    ranges,
-                    startedAt,
-                    startedBy: startedBy || "Operador",
-                    measurePlan,
-                    destination,
-                    conditionInitial,
-                    origin,
-                    description: `Proceso iniciado por ${startedBy || "Operador"}`
-                  });
-                  console.log("✅ Proceso iniciado exitosamente");
-                } catch (error) {
-                  console.error("❌ Error iniciando proceso:", error);
-                  alert("Error al iniciar el proceso. Revisa la consola para más detalles.");
-                }
-              }}
-              className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500"
-            >
-              Iniciar proceso
-            </button>
-          )}
-
-          {process.status === "running" && (
-            <>
-              <button 
-                onClick={() => {
-                  pauseProcess(tunnelId);
-                  console.log("✅ Proceso pausado exitosamente");
-                }} 
-                className="px-3 py-2 rounded bg-amber-600 hover:bg-amber-500"
-              >
-                Pausar
-              </button>
-              <button
-                onClick={() => {
-                  updateRanges(tunnelId, ranges);
-                  updateProcessInfo(tunnelId, { startedAt, startedBy, measurePlan, destination, conditionInitial, origin });
-                }}
-                className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
-              >
-                Guardar cambios
-              </button>
-            </>
-          )}
-
-          {process.status === "paused" && (
-            <>
-              <button 
-                onClick={() => {
-                  resumeProcess(tunnelId);
-                  console.log("✅ Proceso reanudado exitosamente");
-                }} 
-                className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
-              >
-                Continuar
-              </button>
-              <button
-                onClick={() => {
-                  updateRanges(tunnelId, ranges);
-                  updateProcessInfo(tunnelId, { startedAt, startedBy, measurePlan, destination, conditionInitial, origin });
-                }}
-                className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
-              >
-                Guardar cambios
-              </button>
-            </>
-          )}
-        </div>
-
-        {(process.status === "running" || process.status === "paused") && (
-          <div className="rounded-xl border border-slate-700/60 p-3 bg-slate-900/30">
-            <div className="font-medium mb-2">Finalizar proceso</div>
-            <div className="flex flex-wrap gap-2 items-end">
-              <Field label="Finalizado por">
+            {/* Columna derecha (campos “clásicos”) */}
+            <div className="grid gap-3">
+              <Field label="Fecha inicio">
                 <input
-                  value={endedBy}
-                  onChange={(e) => setEndedBy(e.target.value)}
-                  placeholder="Nombre del operador"
+                  type="datetime-local"
+                  value={toLocalInputValue(startedAt)}
+                  onChange={(e) => setStartedAt(fromLocalInputValue(e.target.value))}
                   className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
                 />
               </Field>
-              <button
-                onClick={async () => {
-                  if (!endedBy.trim()) {
-                    alert("Ingresa quién finaliza el proceso.");
-                    return;
-                  }
-                  
-                  try {
-                    // Finaliza en el backend y store
-                    await finalizeProcessAction(tunnelId, endedBy.trim());
-                    
-                    // Actualizar historial local
-                    const endedAtNow = new Date().toISOString();
-                    pushHistory(tunnelId, {
-                      id: `${tunnelId}-${endedAtNow}`,
-                      startedAt: process.startedAt ?? endedAtNow,
-                      endedAt: endedAtNow,
-                      fruit: process.fruit,
-                      ranges: process.ranges,
-                      endedBy: endedBy.trim(),
-                    });
-                    
-                    // refresca vista
-                    setHistory(loadHistory(tunnelId));
-                    setEndedBy("");
-                    
-                    console.log("✅ Proceso finalizado exitosamente");
-                  } catch (error) {
-                    console.error("❌ Error finalizando proceso:", error);
-                    alert("Error al finalizar el proceso. Revisa la consola para más detalles.");
-                  }
-                }}
-                className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500"
-              >
-                Finalizar
-              </button>
+
+              <Field label="Mediciones">
+                <select
+                  value={measurePlan}
+                  onChange={(e) => setMeasurePlan(Number(e.target.value) as MeasurePlan)}
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                >
+                  <option value={15}>Cada 15 min</option>
+                  <option value={5}>Cada 5 min</option>
+                  <option value={1}>Cada 1 min</option>
+                </select>
+              </Field>
+
+              <Field label="Destino">
+                <input value={destination} onChange={(e) => setDestination(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+              </Field>
+
+              <Field label="Operador inicial">
+                <input value={startedBy} onChange={(e) => setStartedBy(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+              </Field>
+
+              <Field label="Condición inicial">
+                <textarea value={conditionInitial} onChange={(e) => setConditionInitial(e.target.value)} className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+              </Field>
+
+              <Field label="Origen">
+                <input value={origin} onChange={(e) => setOrigin(e.target.value)} className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+              </Field>
+
+              <Field label="Estado">
+                <input disabled value={process.status === "idle" ? "Libre" : "Ocupado"} className="w-full rounded border border-slate-800 bg-slate-800/60 px-3 py-2" />
+              </Field>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Acciones */}
+          <div className="flex flex-wrap gap-2">
+            {process.status === "idle" && (
+              <button
+                onClick={async () => {
+                  try {
+                    await startProcessAction(tunnelId, {
+                      fruit,
+                      ranges,
+                      startedAt,
+                      startedBy: startedBy || "Operador",
+                      measurePlan,
+                      destination,
+                      conditionInitial,
+                      origin,
+                      description: `Proceso iniciado por ${startedBy || "Operador"}`
+                    });
+                    console.log("✅ Proceso iniciado exitosamente");
+                    setFormContraido(true);
+                  } catch (error) {
+                    console.error("❌ Error iniciando proceso:", error);
+                    alert("Error al iniciar el proceso. Revisa la consola para más detalles.");
+                  }
+                }}
+                className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500"
+              >
+                Iniciar proceso
+              </button>
+            )}
+
+            {process.status === "running" && (
+              <>
+                <button
+                  onClick={() => {
+                    pauseProcess(tunnelId);
+                    console.log("✅ Proceso pausado exitosamente");
+                  }}
+                  className="px-3 py-2 rounded bg-amber-600 hover:bg-amber-500"
+                >
+                  Pausar
+                </button>
+                <button
+                  onClick={() => {
+                    updateRanges(tunnelId, ranges);
+                    updateProcessInfo(tunnelId, { startedAt, startedBy, measurePlan, destination, conditionInitial, origin });
+                  setFormContraido(true);
+                  }}
+                  className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
+                >
+                  Guardar cambios
+                </button>
+              </>
+            )}
+
+            {process.status === "paused" && (
+              <>
+                <button
+                  onClick={() => {
+                    resumeProcess(tunnelId);
+                    console.log("✅ Proceso reanudado exitosamente");
+                    setFormContraido(true);
+                  }}
+                  className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
+                >
+                  Continuar
+                </button>
+                <button
+                  onClick={() => {
+                    updateRanges(tunnelId, ranges);
+                    updateProcessInfo(tunnelId, { startedAt, startedBy, measurePlan, destination, conditionInitial, origin });
+                    setFormContraido(true);
+                  }}
+                  className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
+                >
+                  Guardar cambios
+                </button>
+              </>
+            )}
+          </div>
+
+          {(process.status === "running" || process.status === "paused") && (
+            <div className="rounded-xl border border-slate-700/60 p-3 bg-slate-900/30">
+              <div className="font-medium mb-2">Finalizar proceso</div>
+              <div className="flex flex-wrap gap-2 items-end">
+                <Field label="Finalizado por">
+                  <input
+                    value={endedBy}
+                    onChange={(e) => setEndedBy(e.target.value)}
+                    placeholder="Nombre del operador"
+                    className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                  />
+                </Field>
+                <button
+                  onClick={async () => {
+                    if (!endedBy.trim()) {
+                      alert("Ingresa quién finaliza el proceso.");
+                      return;
+                    }
+
+                    try {
+                      // Finaliza en el backend y store
+                      await finalizeProcessAction(tunnelId, endedBy.trim());
+
+                      // Actualizar historial local
+                      const endedAtNow = new Date().toISOString();
+                      pushHistory(tunnelId, {
+                        id: `${tunnelId}-${endedAtNow}`,
+                        startedAt: process.startedAt ?? endedAtNow,
+                        endedAt: endedAtNow,
+                        fruit: process.fruit,
+                        ranges: process.ranges,
+                        endedBy: endedBy.trim(),
+                      });
+
+                      // refresca vista
+                      setHistory(loadHistory(tunnelId));
+                      setEndedBy("");
+
+                      console.log("✅ Proceso finalizado exitosamente");
+                    } catch (error) {
+                      console.error("❌ Error finalizando proceso:", error);
+                      alert("Error al finalizar el proceso. Revisa la consola para más detalles.");
+                    }
+                  }}
+                  className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500"
+                >
+                  Finalizar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {formContraido && process.status === "running" && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFormContraido(false)}
+            className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
+          >
+            Modificar proceso
+          </button>
+          <button
+            onClick={() => {
+              // puedes reutilizar la lógica del botón de finalizar que ya tienes
+              const name = prompt("¿Quién finaliza el proceso?");
+              if (name) finalizeProcessAction(tunnelId, name);
+            }}
+            className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500"
+          >
+            Finalizar proceso
+          </button>
+        </div>
+      )}
 
       {/* Modal de historial finalizados */}
       {showHist && (
@@ -628,6 +658,8 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   );
 }
 
+
+
 /* ----------------------------------------------------------------
    Histórico de mediciones (tabla + export PDF)
 ------------------------------------------------------------------*/
@@ -637,7 +669,7 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
 
   async function exportPDF() {
     if (isExporting) return; // Evitar múltiples clics
-    
+
     setIsExporting(true);
     try {
       // Verificar que el elemento existe
@@ -647,30 +679,30 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
 
       // Crear un PDF con header y contenido estructurado
       const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-      
+
       // Header del PDF
       pdf.setFontSize(20);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(94, 163, 16); // Verde La Hornilla
       pdf.text("Reporte de Histórico de Temperaturas", 20, 20);
-      
+
       pdf.setFontSize(14);
       pdf.setFont("helvetica", "normal");
       pdf.setTextColor(100, 100, 100);
       pdf.text(`Túnel ${tunnelId}`, 20, 30);
-      
+
       // Información del rango de datos
       if (historico.length > 0) {
         const firstDate = new Date(historico[historico.length - 1].ts);
         const lastDate = new Date(historico[0].ts);
         const rangeStr = `${firstDate.toLocaleDateString('es-ES')} ${firstDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${lastDate.toLocaleDateString('es-ES')} ${lastDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
-        
+
         pdf.setFontSize(10);
         pdf.setTextColor(80, 80, 80);
         pdf.text(`Período: ${rangeStr}`, 20, 40);
         pdf.text(`Total de registros: ${historico.length}`, 20, 47);
       }
-      
+
       // Fecha de generación
       const now = new Date();
       const dateStr = now.toLocaleDateString('es-ES', {
@@ -683,24 +715,24 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
       pdf.setFontSize(10);
       pdf.setTextColor(120, 120, 120);
       pdf.text(`Generado el: ${dateStr}`, 20, 54);
-      
+
       // Línea separadora
       pdf.setDrawColor(94, 163, 16);
       pdf.setLineWidth(0.5);
       pdf.line(20, 60, 270, 60);
-      
+
       // Crear tabla directamente en el PDF para evitar problemas con html2canvas
       const startY = 70;
       const rowHeight = 8;
       const colWidths = [50, 20, 20, 20, 20, 20, 20];
       const startX = 20;
-      
+
       // Headers de la tabla
       pdf.setFontSize(10);
       pdf.setFont("helvetica", "bold");
       pdf.setFillColor(94, 163, 16);
       pdf.setTextColor(255, 255, 255);
-      
+
       const headers = ['Fecha', 'AMB OUT', 'AMB RET', 'IZQ EXT', 'IZQ INT', 'DER INT', 'DER EXT'];
       let currentX = startX;
       headers.forEach((header, index) => {
@@ -708,14 +740,14 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
         pdf.text(header, currentX + 2, startY + 5);
         currentX += colWidths[index];
       });
-      
+
       // Datos de la tabla - procesar todo el historial
       pdf.setFont("helvetica", "normal");
       pdf.setTextColor(0, 0, 0);
-      
+
       let currentPage = 1;
       let currentY = startY + rowHeight; // Empezar después del header
-      
+
       // Procesar todo el historial, no solo 30 registros
       historico.forEach((row, index) => {
         // Verificar si necesitamos una nueva página
@@ -725,29 +757,29 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
           pdf.setTextColor(120, 120, 120);
           pdf.text("La Hornilla - Sistema de Monitoreo de Temperaturas", 20, pdf.internal.pageSize.getHeight() - 10);
           pdf.text(`Página ${currentPage}`, pdf.internal.pageSize.getWidth() - 30, pdf.internal.pageSize.getHeight() - 10);
-          
+
           // Crear nueva página
           pdf.addPage();
           currentPage++;
           currentY = startY + rowHeight; // Resetear Y para la nueva página
-          
+
           // Recrear headers en la nueva página
           pdf.setFontSize(10);
           pdf.setFont("helvetica", "bold");
           pdf.setFillColor(94, 163, 16);
           pdf.setTextColor(255, 255, 255);
-          
+
           currentX = startX;
           headers.forEach((header, headerIndex) => {
             pdf.rect(currentX, startY, colWidths[headerIndex], rowHeight, 'F');
             pdf.text(header, currentX + 2, startY + 5);
             currentX += colWidths[headerIndex];
           });
-          
+
           pdf.setFont("helvetica", "normal");
           pdf.setTextColor(0, 0, 0);
         }
-        
+
         // Fondo alternado para las filas
         if (index % 2 === 0) {
           pdf.setFillColor(240, 240, 240);
@@ -757,15 +789,15 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
             currentX += width;
           });
         }
-        
+
         // Datos de la fila
         currentX = startX;
         const rowData = [
-          new Date(row.ts).toLocaleString('es-ES', { 
-            month: '2-digit', 
-            day: '2-digit', 
-            hour: '2-digit', 
-            minute: '2-digit' 
+          new Date(row.ts).toLocaleString('es-ES', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
           }),
           fmt(row.AMB_OUT),
           fmt(row.AMB_RET),
@@ -774,25 +806,25 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
           fmt(row.DER_INT_ENT ?? row.PULP_1),
           fmt(row.DER_EXT_ENT ?? row.PULP_4)
         ];
-        
+
         rowData.forEach((data, colIndex) => {
           pdf.text(data, currentX + 2, currentY + 5);
           currentX += colWidths[colIndex];
         });
-        
+
         // Mover a la siguiente fila
         currentY += rowHeight;
       });
-      
+
       // Footer final con numeración de página
       pdf.setFontSize(8);
       pdf.setTextColor(120, 120, 120);
       pdf.text("La Hornilla - Sistema de Monitoreo de Temperaturas", 20, pdf.internal.pageSize.getHeight() - 10);
       pdf.text(`Página ${currentPage}`, pdf.internal.pageSize.getWidth() - 30, pdf.internal.pageSize.getHeight() - 10);
-      
+
       // Guardar el PDF
       pdf.save(`historico-tunel-${tunnelId}-${now.toISOString().split('T')[0]}.pdf`);
-      
+
     } catch (e) {
       console.error("Error al exportar PDF:", e);
       alert(`Error al exportar PDF: ${e instanceof Error ? e.message : 'Error desconocido'}`);
@@ -804,15 +836,14 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <div className="font-semibold text-white">Últimas mediciones</div>
-        <button 
-          onClick={exportPDF} 
+        <div className="font-semibold text-white px-4 pb-4">Últimas mediciones</div>
+        <button
+          onClick={exportPDF}
           disabled={isExporting}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-            isExporting 
-              ? 'bg-green-600/50 text-green-200 cursor-not-allowed' 
-              : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
-          }`}
+          className={`flex items-center gap-2 px-4 m-4 py-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${isExporting
+            ? 'bg-green-600/50 text-green-200 cursor-not-allowed'
+            : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
+            }`}
         >
           {isExporting ? (
             <>
@@ -833,7 +864,7 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
         </button>
       </div>
 
-      <div ref={areaRef} className="overflow-x-auto rounded-xl border border-slate-700/60 p-4 bg-slate-900/40">
+      <div ref={areaRef} className="overflow-x-auto rounded-xl border border-slate-700/60 p-4 m-4 bg-slate-900/40">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left border-b-2 border-green-600">
@@ -861,7 +892,7 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
           </tbody>
         </table>
       </div>
-      <div className="text-xs text-slate-400 mt-2">(* Datos desde API ─ refresco automático)</div>
+      <div className="text-xs text-slate-400 mt-2 p-4" >(* Datos desde API ─ refresco automático)</div>
     </div>
   );
 }
@@ -871,7 +902,7 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
 ------------------------------------------------------------------*/
 function Card({ title, children, subtitle }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-700/60 p-4 bg-slate-900/40">
+    <div className="rounded-xl border border-slate-700/60 p-4 mx-4 mb-4 bg-slate-900/40">
       <div className="text-sm text-slate-300">{title}</div>
       {subtitle && <div className="text-[11px] text-slate-400">{subtitle}</div>}
       <div className="mt-2">{children}</div>
