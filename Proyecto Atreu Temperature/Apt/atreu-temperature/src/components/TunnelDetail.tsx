@@ -667,6 +667,39 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
   const areaRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
+  // Exportar a Excel (CSV compatible con Excel)
+  function exportExcel() {
+    try {
+      const headers = ['Fecha','AMB OUT','AMB RET','IZQ EXT','IZQ INT','DER INT','DER EXT'];
+      const rows = historico.map(row => [
+        new Date(row.ts).toLocaleString('es-ES'),
+        fmt(row.AMB_OUT),
+        fmt(row.AMB_RET),
+        fmt(row.IZQ_EXT_ENT ?? row.PULP_3),
+        fmt(row.IZQ_INT_ENT ?? row.PULP_2),
+        fmt(row.DER_INT_ENT ?? row.PULP_1),
+        fmt(row.DER_EXT_ENT ?? row.PULP_4)
+      ]);
+
+      // Construir CSV (separador coma, escapar comillas)
+      const escape = (v: string) => '"' + (v ?? '').replace(/"/g, '""') + '"';
+      const csv = [headers.map(escape).join(','), ...rows.map(r => r.map(v => escape(String(v))).join(','))].join('\n');
+
+      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' }); // BOM para Excel
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historico-tunel-${tunnelId}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Error al exportar Excel:', e);
+      alert(`Error al exportar Excel: ${e instanceof Error ? e.message : 'Error desconocido'}`);
+    }
+  }
+
   async function exportPDF() {
     if (isExporting) return; // Evitar múltiples clics
 
@@ -837,31 +870,44 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
     <div>
       <div className="flex items-center justify-between mb-4">
         <div className="font-semibold text-white px-4 pb-4">Últimas mediciones</div>
-        <button
-          onClick={exportPDF}
-          disabled={isExporting}
-          className={`flex items-center gap-2 px-4 m-4 py-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${isExporting
-            ? 'bg-green-600/50 text-green-200 cursor-not-allowed'
-            : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
-            }`}
-        >
-          {isExporting ? (
-            <>
-              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Generando PDF...
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Exportar PDF
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2 m-4">
+          <button
+            onClick={exportExcel}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg bg-emerald-700 hover:bg-emerald-800 text-white hover:scale-105"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 2H8a2 2 0 00-2 2v3h2V4h11v16H8v-3H6v3a2 2 0 002 2h11a2 2 0 002-2V4a2 2 0 00-2-2z"/>
+              <path d="M10 14l-2-2 2-2-1.4-1.4L6.2 10l-2.4-2.4L2.4 9l2.2 2.2-2.2 2.2 1.4 1.4L6.2 12l2.4 2.4L10 14z"/>
+            </svg>
+            Exportar Excel
+          </button>
+
+          <button
+            onClick={exportPDF}
+            disabled={isExporting}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${isExporting
+              ? 'bg-green-600/50 text-green-200 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
+              }`}
+          >
+            {isExporting ? (
+              <>
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generando PDF...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Exportar PDF
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div ref={areaRef} className="overflow-x-auto rounded-xl border border-slate-700/60 p-4 m-4 bg-slate-900/40">
