@@ -23,7 +23,7 @@ export default function App() {
               <PrivateRoute>
                 <Topbar />
                 <main className="w-full px-6 py-6"><Dashboard /></main>
-                <Footer />
+                {/* Dashboard incluye su propio Footer */}
               </PrivateRoute>
             }
           />

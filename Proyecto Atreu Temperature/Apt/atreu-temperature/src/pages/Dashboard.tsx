@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import TunnelCardRect from "../components/TunnelCardRect";
 import TunnelDetail from "../components/TunnelDetail";
 import useNewAlarms from "../hooks/useNewAlarms";
-import AlarmCenter from "../components/AlarmCenter";
+import Footer from "../components/Footer";
 import { usePolling } from "../hooks/usePolling";
 import { useProcessSync } from "../hooks/useProcessSync";
 import { apiGetTunnels, type TunnelDto } from "../api/client";
@@ -27,6 +27,8 @@ type TunnelData = {
 
 export default function Dashboard() {
   const [selected, setSelected] = useState<number | null>(null);
+  const [showAlarms, setShowAlarms] = useState(false);
+  const [showAllAlarms, setShowAllAlarms] = useState(false);
 
   // 🔌 Sincronización de procesos con el backend
   useProcessSync(5000); // Sincroniza procesos cada 5 segundos
@@ -98,24 +100,184 @@ export default function Dashboard() {
   }, [tunnels]);
 
   return (
-    <div className="min-h-screen app-bg">
-      {/* Panel flotante de alarmas */}
-      <AlarmCenter 
-        allAlerts={alerts} 
-        newAlarms={newAlarms} 
-        onDismiss={dismiss} 
-        onClearAll={clearAll} 
-      />
+    <div className="min-h-screen app-bg flex flex-col">{/* Cambiado a flex para el footer */}
 
-      <div className="mx-auto w-full max-w-[1920px] px-4 sm:px-5 py-4 sm:py-6">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight mb-4 sm:mb-6 text-white">
-          Temperaturas
-        </h1>
+      <div className="flex-1 mx-auto w-full max-w-[1920px] container-padding py-4 sm:py-6">{/* flex-1 para que tome el espacio disponible */}
         
-        <div className="mb-2 text-xs sm:text-sm text-green-200">
-          {loading && tunnels.length === 0 ? "Cargando..." : `${tunnels.length} túneles activos`} • {alerts.length} alertas totales
-          {error && <span className="ml-2 text-red-400">• Error de conexión</span>}
+        {/* Header mejorado */}
+        <div className="glass-dark rounded-2xl p-6 mb-6 border border-border-medium shadow-soft">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-2">
+                Control de Temperatura
+              </h1>
+              <p className="text-brand-200 text-lg">
+                Monitoreo en tiempo real - Sistema La Hornilla
+              </p>
+            </div>
+
+            {/* Stats principales */}
+            <div className="flex flex-wrap gap-3 relative">
+              <div className="badge badge-brand text-sm px-4 py-2">
+                <span className="w-2 h-2 bg-brand-400 rounded-full animate-pulse"></span>
+                {loading && tunnels.length === 0 ? "Cargando..." : `${tunnels.length} Túneles`}
+              </div>
+              
+              {/* Badge de Alertas Clickeable */}
+              <button
+                onClick={() => setShowAlarms(!showAlarms)}
+                className={`relative badge text-sm px-4 py-2 cursor-pointer transition-all duration-200 hover:scale-105 ${
+                  showAlarms 
+                    ? 'badge-error border-2' 
+                    : alerts.length > 0 ? 'badge-warning hover:badge-error' : 'badge-success hover:badge-brand'
+                }`}
+                title="Click para ver alarmas"
+              >
+                <span className="w-2 h-2 bg-current rounded-full animate-pulse"></span>
+                {alerts.length} Alertas
+                {newAlarms.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border border-white"></span>
+                )}
+              </button>
+              
+              {error && (
+                <div className="badge badge-error text-sm px-4 py-2">
+                  <span className="w-2 h-2 bg-current rounded-full animate-pulse"></span>
+                  Sin Conexión
+                </div>
+              )}
+
+
+            </div>
+          </div>
         </div>
+
+        {/* Ventana Flotante de Alarmas */}
+        {showAlarms && (
+          <div className="fixed top-4 right-4 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] z-50 animate-in slide-in-from-right-4 duration-300">
+            <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-2xl overflow-hidden">
+              
+              {/* Header del modal */}
+              <div className="flex items-center justify-between p-3 border-b border-slate-600/50 bg-slate-800/50">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    newAlarms.length > 0 ? "bg-red-500 animate-pulse" : alerts.length > 0 ? "bg-orange-500" : "bg-green-500"
+                  }`}></div>
+                  <h3 className="font-semibold text-white text-sm">
+                    {alerts.length === 0 
+                      ? "Sin Alarmas" 
+                      : `${alerts.length} Alarma${alerts.length === 1 ? '' : 's'}`
+                    }
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowAlarms(false)}
+                  className="p-1 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+                  title="Cerrar ventana"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Contenido del modal */}
+              <div className="p-3">
+                {alerts.length === 0 ? (
+                  <div className="text-center py-6">
+                    <div className="text-3xl mb-2">✅</div>
+                    <div className="text-sm font-medium text-white mb-1">¡Todo en Orden!</div>
+                    <div className="text-xs text-slate-400">No hay alarmas activas</div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Controles compactos */}
+                    <div className="flex gap-1 mb-3">
+                      <button
+                        onClick={() => setShowAllAlarms(!showAllAlarms)}
+                        className="flex-1 text-xs font-medium rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white px-2 py-1.5 border border-slate-600 hover:border-slate-500 transition-all duration-200"
+                      >
+                        {showAllAlarms ? `Nuevas (${newAlarms.length})` : `Todas (${alerts.length})`}
+                      </button>
+                      <button
+                        onClick={() => { clearAll(); setShowAlarms(false); }}
+                        className="text-xs font-medium rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-200 hover:text-white px-2 py-1.5 border border-red-500/30 hover:border-red-500/50 transition-all duration-200"
+                      >
+                        Cerrar Todo
+                      </button>
+                    </div>
+
+                    {/* Lista de alarmas scrolleable */}
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+                      {(showAllAlarms ? alerts : newAlarms).map((a) => (
+                        <div
+                          key={a.id}
+                          className={`rounded-lg border p-2.5 transition-colors ${
+                            a.status === "alarm" 
+                              ? "border-red-500/30 bg-red-950/30 hover:bg-red-950/40" 
+                              : "border-orange-500/30 bg-orange-950/30 hover:bg-orange-950/40"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-white text-sm">
+                                Túnel {a.tunnel}
+                              </span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                a.status === "alarm" 
+                                  ? "bg-red-500/20 text-red-200" 
+                                  : "bg-orange-500/20 text-orange-200"
+                              }`}>
+                                {a.status === "alarm" ? "ALARM" : "WARN"}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="text-xs text-slate-300 mb-2 space-y-0.5">
+                            <div className="flex justify-between">
+                              <span><strong>Sensor:</strong> {a.sensor}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span><strong>Valor:</strong></span>
+                              <span className={`font-mono font-bold ${
+                                a.status === "alarm" ? "text-red-300" : "text-orange-300"
+                              }`}>
+                                {a.value === "OUT" ? "OUT" : `${a.value}°C`}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span><strong>Fruta:</strong></span>
+                              <span className="text-green-300">{a.fruit}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => dismiss(a.id)}
+                              className="text-xs font-medium rounded bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white px-2 py-1 border border-slate-600 hover:border-slate-500 transition-all duration-200"
+                            >
+                              Cerrar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Mensajes cuando no hay alarmas del tipo seleccionado */}
+                      {!showAllAlarms && newAlarms.length === 0 && alerts.length > 0 && (
+                        <div className="text-center py-4 text-slate-400">
+                          <div className="text-xl mb-1">🔔</div>
+                          <div className="text-xs font-medium text-white mb-0.5">No hay alarmas nuevas</div>
+                          <div className="text-xs">Cambia a "Todas" para verlas</div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mensaje de error */}
         {error && (
@@ -131,34 +293,54 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Grid de túneles */}
+        {/* Grid de túneles mejorado */}
         {tunnels.length > 0 && (
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {tunnels.map((t) => (
-              <TunnelCardRect
-                key={t.id}
-                id={t.id}
-                fruta={t.fruit}
-                sensores={t.sensors}
-                onClick={() => setSelected(t.id)}
-              />
-            ))}
-          </div>
+          <section className="mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="text-2xl font-bold text-white">Túneles de Refrigeración</h2>
+              <div className="h-px bg-gradient-to-r from-brand-400/50 to-transparent flex-1"></div>
+            </div>
+            
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {tunnels.map((t) => (
+                <div key={t.id} className="card-hover">
+                  <TunnelCardRect
+                    id={t.id}
+                    fruta={t.fruit}
+                    sensores={t.sensors}
+                    onClick={() => setSelected(t.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
-        {/* Cámaras */}
-        <section className="mt-6 sm:mt-8">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 text-white">Cámaras</h2>
-          <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+        {/* Cámaras mejoradas */}
+        <section className="glass-dark rounded-2xl p-6 border border-border-medium">
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="text-xl font-bold text-white">Cámaras de Ambiente</h2>
+            <div className="h-px bg-gradient-to-r from-brand-400/50 to-transparent flex-1"></div>
+            <span className="text-sm text-brand-300">Tiempo real</span>
+          </div>
+          
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {cameras.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between rounded-lg sm:rounded-xl border border-slate-700 bg-slate-900/80 px-3 sm:px-4 py-2 sm:py-3 hover:bg-slate-900 transition-colors"
+                className="group card rounded-xl border border-border-subtle px-3 sm:px-4 py-3 sm:py-4 hover:border-brand-500/30 transition-all duration-200"
               >
-                <span className="text-xs sm:text-sm text-green-200">Cám {c.id}</span>
-                <span className="text-[10px] sm:text-[12px] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-green-800/40 border border-green-600/40 text-green-100">
-                  {c.temp}°C
-                </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                    <span className="text-xs sm:text-sm text-text-secondary group-hover:text-brand-300 transition-colors">
+                      Cám {c.id}
+                    </span>
+                  </div>
+                  <span className="text-sm sm:text-base font-semibold px-2 py-1 rounded-lg bg-brand-600/20 text-brand-300 border border-brand-600/30">
+                    {c.temp}°C
+                  </span>
+                </div>
               </div>
             ))}
           </div>
@@ -173,6 +355,9 @@ export default function Dashboard() {
           onClose={() => setSelected(null)}
         />
       )}
+
+      {/* Footer simple */}
+      <Footer />
     </div>
   );
 }
