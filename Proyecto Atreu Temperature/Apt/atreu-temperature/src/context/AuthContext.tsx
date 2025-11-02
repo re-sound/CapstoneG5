@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { hashPasswordWithUserSalt, isWebCryptoAvailable } from '../utils/hash';
 
 interface User {
   id: string;
@@ -78,12 +79,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       
+      // Hashear la contraseña antes de enviarla usando salt con user_id
+      let hashedPassword = password;
+      if (isWebCryptoAvailable()) {
+        hashedPassword = await hashPasswordWithUserSalt(password, user_id);
+        console.log('🔐 [FRONTEND] Password original:', password);
+        console.log('🔐 [FRONTEND] Password hasheada con SHA-256 + salt:', hashedPassword);
+        console.log('🔐 [FRONTEND] Longitud del hash:', hashedPassword.length);
+      } else {
+        console.warn('⚠️ [FRONTEND] Web Crypto API no disponible, enviando contraseña sin hashear');
+      }
+      
       const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ user_id, password })
+        body: JSON.stringify({ user_id, password: hashedPassword })
       });
 
       const data = await response.json();
