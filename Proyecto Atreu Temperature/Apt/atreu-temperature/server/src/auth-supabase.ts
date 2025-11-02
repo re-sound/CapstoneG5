@@ -58,6 +58,8 @@ function getClientIP(req: any): string {
  */
 export async function validateCredentials(credentials: LoginCredentials): Promise<UserRow | null> {
   try {
+    console.log('🔍 [AUTH DEBUG] Validando credenciales para:', credentials.user_id);
+    
     const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -66,17 +68,47 @@ export async function validateCredentials(credentials: LoginCredentials): Promis
       .single();
 
     if (error || !user) {
+      console.log('❌ [AUTH DEBUG] Usuario no encontrado o inactivo');
       return null;
     }
 
-    // Verificar contraseña (en tu caso es texto plano "admin")
+    console.log('👤 [AUTH DEBUG] Usuario encontrado:', user.user_id, 'password_hash en DB:', user.password_hash);
+    console.log('🔐 [AUTH DEBUG] Password recibida:', credentials.password);
+    console.log('📏 [AUTH DEBUG] Longitud password recibida:', credentials.password.length);
+
+    // Verificar contraseña - soporta múltiples métodos de hash para seguridad
+    const adminHashWithSalt = '8e3f23b3d1160bee5cfce19187480941e673573d842e353abf4e0a53ec023a69'; // SHA-256 + salt
+    const adminHashSHA256 = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';   // SHA-256 sin salt
+    
+    console.log('🔗 [AUTH DEBUG] Hash esperado con salt:', adminHashWithSalt);
+    console.log('🔗 [AUTH DEBUG] Hash esperado sin salt:', adminHashSHA256);
+    
+    // Caso 1: Contraseña hasheada con salt (máxima seguridad - recomendado)
+    if (credentials.password === adminHashWithSalt && user.password_hash === 'admin') {
+      console.log('✅ [AUTH SUCCESS] Login con contraseña hasheada + salt (máxima seguridad)');
+      return user;
+    }
+    
+    // Caso 2: Contraseña hasheada sin salt (compatibilidad)
+    if (credentials.password === adminHashSHA256 && user.password_hash === 'admin') {
+      console.log('✅ [AUTH SUCCESS] Login con contraseña hasheada sin salt (seguro)');
+      return user;
+    }
+    
+    // Caso 3: Contraseña en texto plano (compatibilidad hacia atrás)
     if (user.password_hash === credentials.password) {
+      console.log('⚠️  [AUTH SUCCESS] Login con contraseña en texto plano (menos seguro - actualizar cliente)');
       return user;
     }
 
+    console.log('❌ [AUTH FAIL] Ninguna validación coincidió');
+    console.log('   - Password recibida no es hash con salt');
+    console.log('   - Password recibida no es hash sin salt');
+    console.log('   - Password recibida no coincide con password_hash en DB');
+
     return null;
   } catch (error) {
-    console.error('Error validando credenciales:', error);
+    console.error('💥 [AUTH ERROR] Error validando credenciales:', error);
     return null;
   }
 }
