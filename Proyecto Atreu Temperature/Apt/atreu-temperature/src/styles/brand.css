@@ -103,11 +103,18 @@
   border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
-/* ====== FONDO DE APLICACIÓN ====== */
+/* ====== FONDO DE APLICACIÓN MEJORADO ====== */
 .app-bg {
   background:
-    radial-gradient(1200px 800px at 20% -10%, rgba(94, 163, 16, 0.08), transparent 60%),
-    radial-gradient(900px 700px at 85% 0%, rgba(94, 163, 16, 0.06), transparent 60%),
+    /* Gradientes principales */
+    radial-gradient(1400px 900px at 25% -15%, rgba(94, 163, 16, 0.12), transparent 65%),
+    radial-gradient(1100px 800px at 80% -5%, rgba(94, 163, 16, 0.08), transparent 70%),
+    radial-gradient(800px 600px at 50% 100%, rgba(94, 163, 16, 0.06), transparent 60%),
+    
+    /* Textura sutil */
+    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.02) 50%, transparent 100%),
+    
+    /* Base */
     var(--bg-primary);
 }
 
@@ -136,11 +143,21 @@
 }
 
 .select { 
-  composes: input; 
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  transition: all 0.2s ease;
 }
 
 .textarea { 
-  composes: input; 
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  transition: all 0.2s ease;
   min-height: 5rem; 
   resize: vertical;
 }
@@ -164,6 +181,86 @@
   outline-offset: 2px;
 }
 
+/* ====== EFECTOS VISUALES MEJORADOS ====== */
+
+/* Efectos de hover para tarjetas */
+.card-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 16px 40px rgba(0,0,0,0.45),
+    0 0 20px rgba(94, 163, 16, 0.15);
+}
+
+/* Animaciones sutiles */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.glow-animation {
+  animation: glow 3s ease-in-out infinite;
+}
+
+/* Gradientes de estado */
+.gradient-success {
+  background: linear-gradient(135deg, var(--success) 0%, #22c55e 100%);
+}
+
+.gradient-warning {
+  background: linear-gradient(135deg, var(--warning) 0%, #fbbf24 100%);
+}
+
+.gradient-error {
+  background: linear-gradient(135deg, var(--error) 0%, #f87171 100%);
+}
+
+.gradient-brand {
+  background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-400) 100%);
+}
+
+/* Efectos de cristal (glassmorphism) */
+.glass {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-dark {
+  background: rgba(16, 23, 26, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Sombras mejoradas */
+.shadow-brand-lg {
+  box-shadow: 
+    0 20px 40px rgba(94, 163, 16, 0.25),
+    0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.shadow-soft {
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
 /* ====== UTILIDADES DE ESPACIADO ====== */
 .space-y-4 > * + * {
   margin-top: 1rem;
@@ -175,4 +272,24 @@
 
 .space-y-8 > * + * {
   margin-top: 2rem;
+}
+
+/* ====== UTILIDADES RESPONSIVAS ====== */
+.container-padding {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-padding {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-padding {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
