@@ -1,5 +1,5 @@
 // src/components/TunnelDetail.tsx
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Modal from "./Modal";
 import Tabs, { type TabItem } from "./Tabs";
 import ChartTab from "./ChartTab";
@@ -99,6 +99,7 @@ const startProcessAction = async (
       measure_plan: payload.measurePlan,
       destination: payload.destination,
       origin: payload.origin,
+
       condition_initial: payload.conditionInitial,
       description: payload.description
     });
@@ -294,12 +295,65 @@ function chipBg(status: ReturnType<typeof classifyTemp>) {
 ------------------------------------------------------------------*/
 function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   const [formContraido, setFormContraido] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
+
+  // 🔹 Estado inicial: un objeto que guarda el estado por sensor
+  const [sensorSettings, setSensorSettings] = useState<
+    Record<
+      string,
+      { enabled: boolean; ranges: { min: number; max: number; valNuev: number } }
+    >
+  >({});
+
+  // 🔹 Efecto para inicializar los sensores al cargar el componente
+  useEffect(() => {
+    const sensores = TUNELES_MOCK.find((t) => t.id === tunnelId)?.sensores || {};
+    const initialSettings: Record<
+      string,
+      { enabled: boolean; ranges: { min: number; max: number; valNuev: number } }
+    > = {};
+
+    Object.keys(sensores).forEach((nombre) => {
+      initialSettings[nombre] = {
+        enabled: false,
+        ranges: { min: 0, max: 0, valNuev: 0 },
+      };
+    });
+
+    setSensorSettings(initialSettings);
+  }, [tunnelId]);
+
+  // 🔹 Funciones auxiliares
+  const handleToggle = (nombre: string, checked: boolean) => {
+    setSensorSettings((prev) => ({
+      ...prev,
+      [nombre]: { ...prev[nombre], enabled: checked },
+    }));
+  };
+
+  const handleRangeChange = (nombre: string, field: "min" | "max" | "valNuev", value: number) => {
+    setSensorSettings((prev) => ({
+      ...prev,
+      [nombre]: {
+        ...prev[nombre],
+        ranges: { ...prev[nombre].ranges, [field]: value },
+      },
+    }));
+  };
+
   const process = useSyncExternalStore(
     subscribe,
     () => getProcess(tunnelId) || getDefaultProcess(tunnelId),
     () => getProcess(tunnelId) || getDefaultProcess(tunnelId)
   ) as TunnelProcess; // Aserción de tipo para evitar null
 
+  useEffect(() => {
+    if (process.status === "running" || process.status === "paused") {
+      setFormContraido(true);
+    } else {
+      setFormContraido(false);
+    }
+  }, [process.status]);
   // formularios
   const [fruit, setFruit] = useState<Fruit>(process.fruit);
   const [ranges, setRanges] = useState<Range>(process.ranges);
@@ -307,6 +361,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   const [measurePlan, setMeasurePlan] = useState<MeasurePlan>(process.measurePlan ?? 15);
   const [destination, setDestination] = useState(process.destination ?? "");
   const [startedBy, setStartedBy] = useState(process.startedBy ?? "");
+  const [conditionFinal, setConditionFinal] = useState(process.conditionFinal ?? "");
   const [conditionInitial, setConditionInitial] = useState(process.conditionInitial ?? "");
   const [origin, setOrigin] = useState(process.origin ?? "");
   const [endedBy, setEndedBy] = useState("");
@@ -325,6 +380,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
     setMeasurePlan(process.measurePlan ?? 15);
     setDestination(process.destination ?? "");
     setStartedBy(process.startedBy ?? "");
+    setConditionFinal(process.conditionFinal ?? "");
     setConditionInitial(process.conditionInitial ?? "");
     setOrigin(process.origin ?? "");
   }
@@ -381,6 +437,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
       </div>
 
       {/* Formulario: iniciar o actualizar */}
+
       {!formContraido && (
         <div className="rounded-xl border border-slate-700/60 p-4 bg-slate-900/40 space-y-4">
           <div className="font-semibold">{process.status === "idle" ? "Inicio de Proceso" : "Ajustes del Proceso"}</div>
@@ -406,16 +463,78 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
               </Field>
 
               <div className="rounded-lg border border-slate-700/60 p-3 bg-slate-900/30">
-                <div className="font-medium mb-2">Rangos (alarmas e ideal)</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <NumberBox label="Mín. alarma" value={ranges.min} onChange={(v) => setRanges({ ...ranges, min: v })} />
-                  <NumberBox label="Máx. alarma" value={ranges.max} onChange={(v) => setRanges({ ...ranges, max: v })} />
-                  <NumberBox label="Ideal desde" value={ranges.idealMin} onChange={(v) => setRanges({ ...ranges, idealMin: v })} />
-                  <NumberBox label="Ideal hasta" value={ranges.idealMax} onChange={(v) => setRanges({ ...ranges, idealMax: v })} />
-                </div>
-                <div className="text-xs text-slate-400 mt-2">
-                  Al cambiar la fruta se restablecen los rangos por defecto de esa especie.
-                </div>
+                <div className="font-medium mb-2">Listado de sensores</div>
+                <table className="w-full text-sm text-slate-300 border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-700 text-slate-200">
+                      <th className="py-2 px-3 text-left">Nombre</th>
+                      <th className="py-2 px-3 text-center">Valor actual</th>
+                      <th className="py-2 px-3 text-center">Habilitado</th>
+                      <th className="py-2 px-3 text-center">Mín. alarma</th>
+                      <th className="py-2 px-3 text-center">Máx. alarma</th>
+                      <th className="py-2 px-3 text-center">Valor nuevo</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {Object.entries(
+                      TUNELES_MOCK.find((t) => t.id === tunnelId)?.sensores || {}
+                    ).map(([nombre, valor]) => {
+                      const settings = sensorSettings[nombre] || {
+                        enabled: false,
+                        ranges: { min: 0, max: 0, valNuev: 0 },
+                      };
+
+                      return (
+                        <tr
+                          key={nombre}
+                          className="border-b border-slate-800 hover:bg-slate-800/40 transition"
+                        >
+                          <td className="py-2 px-3 font-medium text-slate-200">
+                            {nombre.replace(/_/g, " ")}
+                          </td>
+
+                          <td className="py-2 px-3 text-center">
+                            {typeof valor === "number" ? `${valor.toFixed(1)}°C` : "—"}
+                          </td>
+
+                          <td className="py-2 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={settings.enabled}
+                              onChange={(e) => handleToggle(nombre, e.target.checked)}
+                              className="w-5 h-5 accent-emerald-600 rounded cursor-pointer"
+                            />
+                          </td>
+
+                          <td className="py-2 px-3 text-center">
+                            <NumberBox
+                              label=""
+                              value={settings.ranges.min}
+                              onChange={(v) => handleRangeChange(nombre, "min", v)}
+                            />
+                          </td>
+
+                          <td className="py-2 px-3 text-center">
+                            <NumberBox
+                              label=""
+                              value={settings.ranges.max}
+                              onChange={(v) => handleRangeChange(nombre, "max", v)}
+                            />
+                          </td>
+
+                          <td className="py-2 px-3 text-center">
+                            <NumberBox
+                              label=""
+                              value={settings.ranges.valNuev}
+                              onChange={(v) => handleRangeChange(nombre, "valNuev", v)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -508,8 +627,8 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                 <button
                   onClick={() => {
                     updateRanges(tunnelId, ranges);
-                    updateProcessInfo(tunnelId, { startedAt, startedBy, measurePlan, destination, conditionInitial, origin });
-                  setFormContraido(true);
+                    updateProcessInfo(tunnelId, { fruit, startedAt, startedBy, measurePlan, destination, conditionInitial, origin });
+                    setFormContraido(true);
                   }}
                   className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
                 >
@@ -533,7 +652,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                 <button
                   onClick={() => {
                     updateRanges(tunnelId, ranges);
-                    updateProcessInfo(tunnelId, { startedAt, startedBy, measurePlan, destination, conditionInitial, origin });
+                    updateProcessInfo(tunnelId, { fruit, startedAt, startedBy, measurePlan, destination, conditionInitial, origin });
                     setFormContraido(true);
                   }}
                   className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
@@ -548,6 +667,12 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
             <div className="rounded-xl border border-slate-700/60 p-3 bg-slate-900/30">
               <div className="font-medium mb-2">Finalizar proceso</div>
               <div className="flex flex-wrap gap-2 items-end">
+                <Field label="Observacion">
+                  <textarea value={conditionFinal} onChange={(e) => setConditionFinal(e.target.value)} className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 " />
+                </Field>
+                <Field label="Condición Final">
+                  <textarea value={conditionInitial} onChange={(e) => setConditionInitial(e.target.value)} className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 " />
+                </Field>
                 <Field label="Finalizado por">
                   <input
                     value={endedBy}
@@ -875,6 +1000,12 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
               <th className="py-3 px-2 font-semibold text-white bg-green-600/20">IZQ INT ENT</th>
               <th className="py-3 px-2 font-semibold text-white bg-green-600/20">DER INT ENT</th>
               <th className="py-3 px-2 font-semibold text-white bg-green-600/20">DER EXT ENT</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> ESTADO </th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> COND.INI </th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> COND.FIN </th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> LECT.MIN </th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> LECT.MAX </th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> OBSERVACION </th>
             </tr>
           </thead>
           <tbody>
@@ -928,7 +1059,11 @@ function NumberBox({ label, value, onChange }: { label: string; value: number; o
         type="number"
         step="0.1"
         value={value}
-        onChange={(e) => onChange(+e.target.value)}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === "") onChange(""); // permite campo vacío
+          else onChange(Number(val)); // convierte solo si hay número
+        }}
         className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
       />
     </label>
