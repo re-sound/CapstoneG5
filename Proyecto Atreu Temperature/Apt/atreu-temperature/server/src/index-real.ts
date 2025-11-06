@@ -29,6 +29,7 @@ import {
   getActiveUserSessions,
   requireAuth 
 } from "./auth-supabase.js";
+import { syncTunnelFruitType } from "./sync-fruit-type.js";
 
 const app = express();
 app.use(cors());
@@ -244,6 +245,10 @@ app.post("/api/processes/:tunnelId/start", requireAuth, async (req, res) => {
 
     console.log(`✅ Proceso creado con ID: ${newProcess.id}`);
 
+    // Sincronizar el fruit_type del túnel con la fruta del proceso
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado con: ${fruit}`);
+
     res.json({ ok: true, tunnelId, status: "running", processId: newProcess.id });
   } catch (error) {
     console.error('Error en POST /api/processes/:tunnelId/start:', error);
@@ -270,6 +275,10 @@ app.put("/api/processes/:tunnelId/ranges", async (req, res) => {
       return res.status(404).json({ error: "Proceso no encontrado" });
     }
 
+    // Sincronizar el fruit_type después de actualizar el proceso
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado después de actualizar rangos`);
+
     res.json({ ok: true });
   } catch (error) {
     console.error('Error en PUT /api/processes/:tunnelId/ranges:', error);
@@ -292,6 +301,10 @@ app.post("/api/processes/:tunnelId/pause", async (req, res) => {
       return res.status(404).json({ error: "Proceso no encontrado" });
     }
 
+    // Sincronizar el fruit_type después de pausar el proceso
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado después de pausar`);
+
     res.json({ ok: true, status: "paused" });
   } catch (error) {
     console.error('Error en POST /api/processes/:tunnelId/pause:', error);
@@ -313,6 +326,10 @@ app.post("/api/processes/:tunnelId/resume", async (req, res) => {
     if (!updatedProcess) {
       return res.status(404).json({ error: "Proceso no encontrado" });
     }
+
+    // Sincronizar el fruit_type después de reanudar el proceso
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado después de reanudar`);
 
     res.json({ ok: true, status: "running" });
   } catch (error) {
@@ -372,6 +389,10 @@ app.post("/api/processes/:tunnelId/finalize", requireAuth, async (req, res) => {
     });
 
     console.log(`✅ Proceso ${process.id} finalizado correctamente. Estado: ${updatedProcess.status}`);
+
+    // Sincronizar el fruit_type después de finalizar el proceso (cambiará a "Sin proceso")
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado a 'Sin proceso' después de finalizar`);
 
     res.json({ ok: true, status: "finished", process: updatedProcess });
   } catch (error) {
