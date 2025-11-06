@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request } from "express";
 import cors from "cors";
 import { 
   getTunnelsWithLastReading, 
@@ -30,6 +30,29 @@ import {
   requireAuth 
 } from "./auth-supabase.js";
 import { syncTunnelFruitType } from "./sync-fruit-type.js";
+
+// Extender tipos de Express para incluir user y session
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        user_id: string;
+        full_name: string;
+        email: string;
+        role_id: number;
+        last_login: string;
+        last_logout: string | null;
+      };
+      session?: {
+        id: string;
+        login_time: string;
+        ip_address: string;
+        device_info: string;
+      };
+    }
+  }
+}
 
 const app = express();
 app.use(cors());
@@ -200,6 +223,11 @@ app.post("/api/processes/:tunnelId/start", requireAuth, async (req, res) => {
   try {
     const tunnelId = Number(req.params.tunnelId);
     const now = new Date().toISOString();
+    
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+    
     const userId = req.user.id; // Usuario actual autenticado
     const {
       fruit,
@@ -343,6 +371,11 @@ app.post("/api/processes/:tunnelId/finalize", requireAuth, async (req, res) => {
   try {
     const tunnelId = Number(req.params.tunnelId);
     const now = new Date().toISOString();
+    
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+    
     const userId = req.user.id; // Usuario actual autenticado
 
     // Obtener proceso actual
@@ -498,6 +531,10 @@ app.post("/api/auth/logout", async (req, res) => {
 
 // GET /api/auth/me → obtener información del usuario actual
 app.get("/api/auth/me", requireAuth, (req, res) => {
+  if (!req.user || !req.session) {
+    return res.status(401).json({ error: "Usuario no autenticado" });
+  }
+  
   res.json({
     success: true,
     user: {
@@ -521,6 +558,10 @@ app.get("/api/auth/me", requireAuth, (req, res) => {
 // GET /api/auth/sessions → obtener sesiones activas del usuario
 app.get("/api/auth/sessions", requireAuth, async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+    
     const sessions = await getActiveUserSessions(req.user.id);
     
     res.json({
@@ -546,6 +587,10 @@ app.get("/api/auth/sessions", requireAuth, async (req, res) => {
 // POST /api/auth/logout-all → cerrar todas las sesiones
 app.post("/api/auth/logout-all", requireAuth, async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+    
     await closeAllUserSessions(req.user.id);
     
     res.json({
