@@ -13,6 +13,8 @@ import {
   getProcessHistory,
   insertProcessHistory
 } from "./supabase-db.js";
+import { syncTunnelFruitType } from "./sync-fruit-type.js";
+import { supabase } from "./supabase.js";
 
 const app = express();
 app.use(cors());
@@ -205,25 +207,80 @@ app.post("/api/processes/:tunnelId/start", async (req, res) => {
       condition_initial = ""
     } = req.body;
 
-    await upsertProcess({
-      tunnel_id: tunnelId,
-      status: "running",
-      fruit,
-      min_temp,
-      max_temp,
-      ideal_min,
-      ideal_max,
-      started_at: now,
-      started_by,
-      ended_at: null,
-      ended_by: null,
-      measure_plan,
-      destination,
-      origin,
-      condition_initial,
-      state_label: "Ocupado",
-      last_change: now
-    });
+    // Verificar si ya existe un proceso activo
+    const existingProcess = await getProcess(tunnelId);
+    
+    if (existingProcess) {
+      // Si existe, actualizar el proceso existente
+      await updateProcess(tunnelId, {
+        status: "running",
+        fruit,
+        min_temp,
+        max_temp,
+        ideal_min,
+        ideal_max,
+        started_at: now,
+        started_by,
+        ended_at: null,
+        ended_by: null,
+        measure_plan,
+        destination,
+        origin,
+        condition_initial,
+        state_label: "Ocupado",
+        last_change: now
+      });
+    } else {
+      // Si no existe, crear un nuevo proceso
+      const newProcess = {
+        tunnel_id: tunnelId,
+        status: "running" as const,
+        fruit,
+        min_temp,
+        max_temp,
+        ideal_min,
+        ideal_max,
+        started_at: now,
+        started_by,
+        ended_at: null,
+        ended_by: null,
+        measure_plan,
+        destination,
+        origin,
+        condition_initial,
+        state_label: "Ocupado" as const,
+        last_change: now
+      };
+
+      // Insertar directamente sin upsert (solo los campos necesarios)
+      const { error: insertError } = await supabase
+        .from('processes')
+        .insert([{
+          tunnel_id: tunnelId,
+          status: "running",
+          fruit,
+          min_temp,
+          max_temp,
+          ideal_min,
+          ideal_max,
+          started_at: now,
+          started_by,
+          measure_plan,
+          destination,
+          origin,
+          condition_initial,
+          state_label: "Ocupado",
+          last_change: now
+        }]);
+
+      if (insertError) {
+        throw new Error(`Error creando proceso: ${insertError.message}`);
+      }
+    }
+
+    // Sincronizar el fruit_type del túnel con la fruta del proceso
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado con: ${fruit}`);
 
     res.json({ ok: true, tunnelId, status: "running" });
   } catch (error) {
@@ -247,6 +304,10 @@ app.put("/api/processes/:tunnelId/ranges", async (req, res) => {
       last_change: now
     });
 
+    // Sincronizar el fruit_type después de actualizar el proceso
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado después de actualizar rangos`);
+
     res.json({ ok: true });
   } catch (error) {
     console.error('Error en PUT /api/processes/:tunnelId/ranges:', error);
@@ -265,6 +326,10 @@ app.post("/api/processes/:tunnelId/pause", async (req, res) => {
       last_change: now
     });
 
+    // Sincronizar el fruit_type después de pausar el proceso
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado después de pausar`);
+
     res.json({ ok: true, status: "paused" });
   } catch (error) {
     console.error('Error en POST /api/processes/:tunnelId/pause:', error);
@@ -282,6 +347,10 @@ app.post("/api/processes/:tunnelId/resume", async (req, res) => {
       status: "running",
       last_change: now
     });
+
+    // Sincronizar el fruit_type después de reanudar el proceso
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado después de reanudar`);
 
     res.json({ ok: true, status: "running" });
   } catch (error) {
@@ -325,6 +394,10 @@ app.post("/api/processes/:tunnelId/finalize", async (req, res) => {
 
     // Eliminar proceso activo (volver a idle)
     await deleteProcess(tunnelId);
+
+    // Sincronizar el fruit_type después de finalizar el proceso (cambiará a "Sin proceso")
+    await syncTunnelFruitType(tunnelId);
+    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado a 'Sin proceso' después de finalizar`);
 
     res.json({ ok: true, status: "idle" });
   } catch (error) {
