@@ -295,7 +295,7 @@ function chipBg(status: ReturnType<typeof classifyTemp>) {
 ------------------------------------------------------------------*/
 function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   const [formContraido, setFormContraido] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+  // const [isChecked, setIsChecked] = useState(false); // No se usa actualmente
 
   // 🔹 Estado inicial: un objeto que guarda el estado por sensor
   const [sensorSettings, setSensorSettings] = useState<
@@ -361,7 +361,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   const [measurePlan, setMeasurePlan] = useState<MeasurePlan>(process.measurePlan ?? 15);
   const [destination, setDestination] = useState(process.destination ?? "");
   const [startedBy, setStartedBy] = useState(process.startedBy ?? "");
-  const [conditionFinal, setConditionFinal] = useState(process.conditionFinal ?? "");
+  // const [conditionFinal, setConditionFinal] = useState(""); // No se usa actualmente
   const [conditionInitial, setConditionInitial] = useState(process.conditionInitial ?? "");
   const [origin, setOrigin] = useState(process.origin ?? "");
   const [endedBy, setEndedBy] = useState("");
@@ -380,7 +380,6 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
     setMeasurePlan(process.measurePlan ?? 15);
     setDestination(process.destination ?? "");
     setStartedBy(process.startedBy ?? "");
-    setConditionFinal(process.conditionFinal ?? "");
     setConditionInitial(process.conditionInitial ?? "");
     setOrigin(process.origin ?? "");
   }
@@ -427,10 +426,23 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
           <Info label="Destino">{process.destination ?? "—"}</Info>
           <Info label="Origen">{process.origin ?? "—"}</Info>
           <Info label="Condición inicial">{process.conditionInitial ?? "—"}</Info>
+          
+          {process.status === "paused" && process.pausedAt && (
+            <Info label="⏸️ Pausado">
+              <span className="text-amber-400">{new Date(process.pausedAt).toLocaleString()}</span>
+            </Info>
+          )}
+          
+          {process.status === "running" && process.resumedAt && (
+            <Info label="▶️ Reanudado">
+              <span className="text-green-400">{new Date(process.resumedAt).toLocaleString()}</span>
+            </Info>
+          )}
+          
           {process.status === "finished" && (
             <>
               <Info label="Finalizado por">{process.endedBy ?? "—"}</Info>
-              <Info label="Finalizado">{process.endedAt ? new Date(process.endedAt).toLocaleString() : "—"}</Info>
+              <Info label="🏁 Finalizado">{process.finalizedAt ? new Date(process.finalizedAt).toLocaleString() : (process.endedAt ? new Date(process.endedAt).toLocaleString() : "—")}</Info>
             </>
           )}
         </div>
@@ -667,11 +679,8 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
             <div className="rounded-xl border border-slate-700/60 p-3 bg-slate-900/30">
               <div className="font-medium mb-2">Finalizar proceso</div>
               <div className="flex flex-wrap gap-2 items-end">
-                <Field label="Observacion">
-                  <textarea value={conditionFinal} onChange={(e) => setConditionFinal(e.target.value)} className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 " />
-                </Field>
-                <Field label="Condición Final">
-                  <textarea value={conditionInitial} onChange={(e) => setConditionInitial(e.target.value)} className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 " />
+                <Field label="Observación Final">
+                  <textarea value={conditionInitial} onChange={(e) => setConditionInitial(e.target.value)} className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 py-2" placeholder="Notas sobre el estado final del proceso..." />
                 </Field>
                 <Field label="Finalizado por">
                   <input
@@ -1107,7 +1116,7 @@ function NumberBox({ label, value, onChange }: { label: string; value: number; o
         value={value}
         onChange={(e) => {
           const val = e.target.value;
-          if (val === "") onChange(""); // permite campo vacío
+          if (val === "") onChange(0); // Default a 0 si está vacío
           else onChange(Number(val)); // convierte solo si hay número
         }}
         className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"

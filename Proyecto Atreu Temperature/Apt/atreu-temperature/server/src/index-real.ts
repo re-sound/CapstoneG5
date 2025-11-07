@@ -250,7 +250,7 @@ app.post("/api/processes/:tunnelId/start", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Ya existe un proceso activo en este túnel" });
     }
 
-    const newProcess = await createProcess({
+    const processData: any = {
       tunnel_id: tunnelId,
       status: "running",
       fruit,
@@ -269,7 +269,18 @@ app.post("/api/processes/:tunnelId/start", requireAuth, async (req, res) => {
       description,
       state_label: "En curso",
       last_change: now
-    });
+    };
+    
+    // Agregar campos nuevos solo si existen en el schema
+    try {
+      processData.paused_at = null;
+      processData.resumed_at = null;
+      processData.finalized_at = null;
+    } catch (e) {
+      // Ignorar si las columnas no existen aún
+    }
+    
+    const newProcess = await createProcess(processData);
 
     console.log(`✅ Proceso creado con ID: ${newProcess.id}`);
 
@@ -320,10 +331,19 @@ app.post("/api/processes/:tunnelId/pause", async (req, res) => {
     const tunnelId = Number(req.params.tunnelId);
     const now = new Date().toISOString();
 
-    const updatedProcess = await updateProcessByTunnel(tunnelId, {
+    const updateData: any = {
       status: "paused",
       last_change: now
-    });
+    };
+    
+    // Agregar paused_at solo si la columna existe
+    try {
+      updateData.paused_at = now;
+    } catch (e) {
+      // Ignorar si la columna no existe aún
+    }
+
+    const updatedProcess = await updateProcessByTunnel(tunnelId, updateData);
 
     if (!updatedProcess) {
       return res.status(404).json({ error: "Proceso no encontrado" });
@@ -331,9 +351,9 @@ app.post("/api/processes/:tunnelId/pause", async (req, res) => {
 
     // Sincronizar el fruit_type después de pausar el proceso
     await syncTunnelFruitType(tunnelId);
-    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado después de pausar`);
+    console.log(`⏸️  Proceso pausado - Túnel ${tunnelId} a las ${new Date(now).toLocaleTimeString()}`);
 
-    res.json({ ok: true, status: "paused" });
+    res.json({ ok: true, status: "paused", paused_at: now });
   } catch (error) {
     console.error('Error en POST /api/processes/:tunnelId/pause:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -346,10 +366,19 @@ app.post("/api/processes/:tunnelId/resume", async (req, res) => {
     const tunnelId = Number(req.params.tunnelId);
     const now = new Date().toISOString();
 
-    const updatedProcess = await updateProcessByTunnel(tunnelId, {
+    const updateData: any = {
       status: "running",
       last_change: now
-    });
+    };
+    
+    // Agregar resumed_at solo si la columna existe
+    try {
+      updateData.resumed_at = now;
+    } catch (e) {
+      // Ignorar si la columna no existe aún
+    }
+
+    const updatedProcess = await updateProcessByTunnel(tunnelId, updateData);
 
     if (!updatedProcess) {
       return res.status(404).json({ error: "Proceso no encontrado" });
@@ -357,9 +386,9 @@ app.post("/api/processes/:tunnelId/resume", async (req, res) => {
 
     // Sincronizar el fruit_type después de reanudar el proceso
     await syncTunnelFruitType(tunnelId);
-    console.log(`✅ Fruit_type del túnel ${tunnelId} sincronizado después de reanudar`);
+    console.log(`▶️  Proceso reanudado - Túnel ${tunnelId} a las ${new Date(now).toLocaleTimeString()}`);
 
-    res.json({ ok: true, status: "running" });
+    res.json({ ok: true, status: "running", resumed_at: now });
   } catch (error) {
     console.error('Error en POST /api/processes/:tunnelId/resume:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -388,7 +417,7 @@ app.post("/api/processes/:tunnelId/finalize", requireAuth, async (req, res) => {
     console.log(`📝 Guardando proceso en historial - Túnel: ${tunnelId}, Usuario: ${userId}`);
 
     // Guardar en historial
-    const historyEntry = await insertProcessHistory({
+    const historyData: any = {
       tunnel_id: tunnelId,
       fruit: process.fruit,
       min_temp: process.min_temp,
@@ -407,19 +436,37 @@ app.post("/api/processes/:tunnelId/finalize", requireAuth, async (req, res) => {
       duration_minutes: process.started_at ? 
         Math.round((new Date(now).getTime() - new Date(process.started_at).getTime()) / (1000 * 60)) : 
         null
-    });
+    };
+    
+    // Agregar campos nuevos solo si existen en el proceso
+    if (process.paused_at !== undefined) historyData.paused_at = process.paused_at;
+    if (process.resumed_at !== undefined) historyData.resumed_at = process.resumed_at;
+    historyData.finalized_at = now;
+    
+    const historyEntry = await insertProcessHistory(historyData);
 
     console.log(`✅ Proceso guardado en historial con ID: ${historyEntry.id}`);
 
     // Marcar proceso como finalizado
     console.log(`🔄 Finalizando proceso ${process.id} del túnel ${tunnelId}`);
     
-    const updatedProcess = await updateProcess(process.id, {
+    const finalizeData: any = {
       status: "finished",
       ended_at: now,
       ended_by: null, // Por ahora null
       last_change: now
-    });
+    };
+    
+    // Agregar finalized_at solo si la columna existe
+    try {
+      finalizeData.finalized_at = now;
+    } catch (e) {
+      // Ignorar si la columna no existe aún
+    }
+    
+    const updatedProcess = await updateProcess(process.id, finalizeData);
+
+    console.log(`🏁 Proceso finalizado - Túnel ${tunnelId} a las ${new Date(now).toLocaleTimeString()}`);
 
     console.log(`✅ Proceso ${process.id} finalizado correctamente. Estado: ${updatedProcess.status}`);
 

@@ -17,6 +17,9 @@ export type TunnelProcess = {
 
   startedAt?: string;
   startedBy?: string;
+  pausedAt?: string;
+  resumedAt?: string;
+  finalizedAt?: string;
   measurePlan?: MeasurePlan;
   destination?: string;
   conditionInitial?: string;

@@ -56,6 +56,9 @@ export type ProcessDto = {
   started_by?: string;
   ended_at?: string;
   ended_by?: string;
+  paused_at?: string;
+  resumed_at?: string;
+  finalized_at?: string;
   measure_plan?: number;
   destination?: string;
   origin?: string;

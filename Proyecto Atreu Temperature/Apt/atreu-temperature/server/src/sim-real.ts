@@ -142,24 +142,52 @@ async function seedOne(tunnelId: number) {
   }
 }
 
-console.log("🔄 Simulador Supabase Real ON - Generando lecturas cada ~40s");
+console.log("🔄 Simulador Supabase Real ON - Lecturas dinámicas según measure_plan");
 console.log("📊 Rango de temperaturas: 3°C - 15°C");
 console.log("⚠️  20% de probabilidad de datos anómalos por ciclo");
 console.log("🚨 Sistema de alertas: condicionado al proceso activo");
 console.log("✅ Lecturas SIEMPRE activas (dashboard en tiempo real)");
-console.log("🔗 Base de datos: Supabase (Esquema Real)");
+console.log("� Intervalos: 1min (measure_plan=1), 5min (=5), 15min (=15), 40s (sin proceso)");
+console.log("�🔗 Base de datos: Supabase (Esquema Real)");
 console.log("---");
+
+// Mantener seguimiento del último ciclo de cada túnel
+const lastInsertTime: Map<number, number> = new Map();
 
 async function seedAll() {
   const timestamp = new Date().toLocaleTimeString('es-ES');
-  console.log(`[${timestamp}] Insertando lecturas para 7 túneles...`);
+  const now = Date.now();
+  
+  console.log(`[${timestamp}] Evaluando lecturas para 7 túneles...`);
+  
   try {
-    await Promise.all(Array.from({ length: 7 }, (_, i) => seedOne(i + 1)));
-    console.log(`✅ [${timestamp}] Lecturas insertadas exitosamente`);
+    for (let i = 1; i <= 7; i++) {
+      const process = await getProcess(i);
+      let intervalMs = 40000; // Default: 40s sin proceso
+      
+      if (process && process.status === 'running') {
+        // Usar measure_plan del proceso activo
+        const measurePlan = process.measure_plan || 15;
+        intervalMs = measurePlan * 60 * 1000; // Convertir minutos a ms
+      }
+      
+      const lastInsert = lastInsertTime.get(i) || 0;
+      const elapsed = now - lastInsert;
+      
+      if (elapsed >= intervalMs) {
+        await seedOne(i);
+        lastInsertTime.set(i, now);
+        
+        if (process && process.status === 'running') {
+          console.log(`  ✓ Túnel ${i}: Lectura insertada (intervalo: ${process.measure_plan || 15}min)`);
+        }
+      }
+    }
   } catch (error) {
     console.error(`❌ [${timestamp}] Error insertando lecturas:`, error);
   }
 }
 
+// Ejecutar cada 10 segundos para evaluar si es momento de insertar
 seedAll();
-setInterval(seedAll, 40000); // 40s
+setInterval(seedAll, 10000);

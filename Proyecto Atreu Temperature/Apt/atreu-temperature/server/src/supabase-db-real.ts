@@ -55,6 +55,9 @@ export async function getLastReading(tunnelId: number): Promise<ReadingRow | nul
 }
 
 export async function getReadingsHistory(tunnelId: number, minutes: number = 60): Promise<ReadingRow[]> {
+  // Obtener el proceso actual para conocer el measure_plan
+  const process = await getProcess(tunnelId);
+  
   const { data, error } = await supabase
     .from('readings')
     .select('*')
@@ -66,7 +69,32 @@ export async function getReadingsHistory(tunnelId: number, minutes: number = 60)
     throw new Error(`Error obteniendo historial del túnel ${tunnelId}: ${error.message}`);
   }
 
-  return data || [];
+  let readings = data || [];
+  
+  // Si hay proceso activo con measure_plan, filtrar lecturas según el intervalo
+  if (process && process.measure_plan && readings.length > 0) {
+    const measurePlanMinutes = process.measure_plan;
+    const intervalMs = measurePlanMinutes * 60 * 1000;
+    
+    // Filtrar lecturas para mantener solo las que coinciden con el intervalo
+    const filtered: ReadingRow[] = [];
+    let lastTimestamp = 0;
+    
+    for (const reading of readings) {
+      const currentTs = new Date(reading.ts).getTime();
+      
+      if (filtered.length === 0 || (currentTs - lastTimestamp) >= intervalMs - 5000) {
+        // Agregamos con margen de 5 segundos de tolerancia
+        filtered.push(reading);
+        lastTimestamp = currentTs;
+      }
+    }
+    
+    console.log(`📊 Historial filtrado para túnel ${tunnelId}: ${readings.length} → ${filtered.length} lecturas (intervalo: ${measurePlanMinutes}min)`);
+    return filtered;
+  }
+
+  return readings;
 }
 
 export async function insertReading(reading: Omit<ReadingRow, 'id' | 'created_at'>): Promise<ReadingRow> {

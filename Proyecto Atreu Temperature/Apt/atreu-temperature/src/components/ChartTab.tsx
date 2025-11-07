@@ -1,5 +1,5 @@
 // src/components/ChartTab.tsx
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 
 /**
@@ -8,6 +8,7 @@ import ReactECharts from "echarts-for-react";
  * - Exportar PNG (toolbox)
  * - dataZoom (inside + slider)
  * - Controles de rango de tiempo y reseteo
+ * - PRESERVA el estado del usuario (zoom, selección) al actualizar datos
  *
  * NOTA: Se fuerza el uso de nombres legibles para sensores:
  * AMB_OUT, AMB_RET, IZQ_EXT_ENT, IZQ_INT_ENT, DER_INT_ENT, DER_EXT_ENT
@@ -19,6 +20,7 @@ export default function ChartTab({
   historico: any[];
 }) {
   const chartRef = useRef<any>(null);
+  const previousDataLength = useRef<number>(0);
 
 
   if (!historico || historico.length === 0) {
@@ -138,6 +140,43 @@ export default function ChartTab({
     series,
   };
 
+  // Efecto para detectar cambios y preservar estado
+  useEffect(() => {
+    if (chartRef.current) {
+      const instance = chartRef.current.getEchartsInstance();
+      
+      // Solo si hay datos nuevos
+      if (historico.length !== previousDataLength.current) {
+        // Guardar el estado actual del zoom y leyenda
+        const currentOption = instance.getOption();
+        const dataZoomState = currentOption.dataZoom;
+        const legendSelected = currentOption.legend?.[0]?.selected;
+        
+        // Actualizar datos manteniendo el estado
+        instance.setOption(option, {
+          notMerge: false, // Hacer merge para preservar interacciones
+          replaceMerge: ['series'], // Solo reemplazar series
+        });
+        
+        // Restaurar zoom si existía
+        if (dataZoomState && dataZoomState.length > 0) {
+          instance.setOption({
+            dataZoom: dataZoomState
+          });
+        }
+        
+        // Restaurar selección de leyenda
+        if (legendSelected) {
+          instance.setOption({
+            legend: { selected: legendSelected }
+          });
+        }
+        
+        previousDataLength.current = historico.length;
+      }
+    }
+  }, [historico, option]);
+
   return (
     <div className="space-y-3">
       {/* Gráfico */}
@@ -146,10 +185,11 @@ export default function ChartTab({
           ref={chartRef}
           option={option} 
           style={{ height: 400, width: "100%" }} 
-          notMerge={true}
+          notMerge={false}
+          lazyUpdate={true}
         />
         <div className="text-xs text-slate-400 mt-2 px-2">
-          Interactivo: zoom, exportar PNG .
+          Interactivo: zoom, exportar PNG. El gráfico preserva tu vista al actualizarse.
         </div>
       </div>
     </div>

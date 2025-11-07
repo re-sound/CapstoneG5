@@ -105,42 +105,44 @@ export default function TunnelCardRect({
         {/* Cuerpo */}
         <div className="px-3 sm:px-4 py-2 sm:py-3">
           <div className="rounded-lg sm:rounded-xl border border-slate-700 bg-slate-900/60 p-2 sm:p-3">
-            {/* Tubo/ventilación superior */}
-            <div className="relative">
-              {/* Ambiente / Retorno centrados (apilados) */}
-              <div className="w-full flex flex-col items-center gap-1 -mt-3">
-                <div className="flex flex-col items-center">
-                  <Label>Ambiente</Label>
-                  <Chip>{typeof AMB_OUT === "number" ? `${AMB_OUT}°C` : "OUT"}</Chip>
-                </div>
-                <div className="flex flex-col items-center">
-                  <Label>Retorno</Label>
-                  <Chip>{typeof AMB_RET === "number" ? `${AMB_RET}°C` : "OUT"}</Chip>
-                </div>
-              </div>
+          
+          {/* Ambiente / Retorno centrados (apilados) */}
+          <div className="w-full flex flex-col items-center gap-1 mb-3">
+            <div className="flex flex-col items-center">
+              <Label>Ambiente</Label>
+              <Chip>{typeof AMB_OUT === "number" ? `${AMB_OUT}°C` : "OUT"}</Chip>
             </div>
-
-            {/* Fila ENTRADA */}
-            <div className="grid grid-cols-4 gap-0.5 sm:gap-1 mt-3 sm:mt-5">
-              <SensorCell value={IZQ_EXT_ENT} label="EXT. IZQ" />
-              <SensorCell value={IZQ_INT_ENT} label="INT. IZQ" />
-              <SensorCell value={DER_INT_ENT} label="INT. DER" />
-              <SensorCell value={DER_EXT_ENT} label="EXT. DER" />
+            <div className="flex flex-col items-center">
+              <Label>Retorno</Label>
+              <Chip>{typeof AMB_RET === "number" ? `${AMB_RET}°C` : "OUT"}</Chip>
             </div>
+          </div>
 
-            {/* Separador */}
-            <div className="my-2 sm:my-3 h-px bg-slate-600/30 rounded-full" />
+          {/* Fila ENTRADA */}
+          <div className="grid grid-cols-4 gap-0.5 sm:gap-1 mt-3 sm:mt-5">
+            <SensorCell value={IZQ_EXT_ENT} label="EXT. IZQ" />
+            <SensorCell value={IZQ_INT_ENT} label="INT. IZQ" />
+            <SensorCell value={DER_INT_ENT} label="INT. DER" />
+            <SensorCell value={DER_EXT_ENT} label="EXT. DER" />
+          </div>
 
-            {/* Fila SALIDA */}
-            <div className="grid grid-cols-4 gap-0.5 sm:gap-1">
-              <SensorCell value={IZQ_EXT_SAL} label="EXT. IZQ" />
-              <SensorCell value={IZQ_INT_SAL} label="INT. IZQ" />
-              <SensorCell value={DER_INT_SAL} label="INT. DER" />
-              <SensorCell value={DER_EXT_SAL} label="EXT. DER" />
-            </div>
-            <div className="h-1.5 rounded-full bg-rose-500/80 shadow-[0_0_14px_#f43f5e] mt-3" />
+          {/* Separador */}
+          <div className="my-2 sm:my-3 h-px bg-slate-600/30 rounded-full" />
+
+          {/* Fila SALIDA */}
+          <div className="grid grid-cols-4 gap-0.5 sm:gap-1">
+            <SensorCell value={IZQ_EXT_SAL} label="EXT. IZQ" />
+            <SensorCell value={IZQ_INT_SAL} label="INT. IZQ" />
+            <SensorCell value={DER_INT_SAL} label="INT. DER" />
+            <SensorCell value={DER_EXT_SAL} label="EXT. DER" />
+          </div>
+
+          {/* Línea roja debajo de las últimas temperaturas*/}
+          <div className="w-full mt-3">
+            <div className="h-1.5 rounded-full bg-rose-500/80 shadow-[0_0_14px_#f43f5e]" />
           </div>
         </div>
+      </div>
       </button>
     </div>
   );

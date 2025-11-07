@@ -1,8 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-// Cargar variables de entorno
-dotenv.config();
+// Obtener __dirname en módulos ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Cargar variables de entorno desde el archivo .env en la raíz del proyecto server
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
 // Configuración de Supabase
 console.log('SUPABASE_URL:', process.env.SUPABASE_URL);
@@ -70,6 +76,9 @@ export interface ProcessRow {
   ended_at: string | null;
   started_by: string | null;
   ended_by: string | null;
+  paused_at?: string | null; // Opcional hasta migración
+  resumed_at?: string | null; // Opcional hasta migración
+  finalized_at?: string | null; // Opcional hasta migración
   measure_plan: number | null;
   destination: string | null;
   origin: string | null;
@@ -92,6 +101,9 @@ export interface ProcessHistoryRow {
   ended_at: string;
   started_by: string | null;
   ended_by: string | null;
+  paused_at?: string | null; // Opcional hasta migración
+  resumed_at?: string | null; // Opcional hasta migración
+  finalized_at?: string | null; // Opcional hasta migración
   measure_plan: number | null;
   destination: string | null;
   origin: string | null;
