@@ -46,9 +46,18 @@ export function useProcessSync(intervalMs = 5000) {
             conditionInitial: proc.condition_initial,
           });
           
-          // Si está pausado, pausarlo también en el frontend
+          // Si está pausado, pausarlo también en el frontend y actualizar timestamps
           if (proc.status === "paused") {
             processStore.pauseProcess(proc.tunnel_id);
+            // Actualizar timestamp de pausa si existe
+            if (proc.paused_at) {
+              processStore.updateProcessInfo(proc.tunnel_id, { pausedAt: proc.paused_at });
+            }
+          }
+          
+          // Actualizar timestamp de reanudación si existe
+          if (proc.resumed_at) {
+            processStore.updateProcessInfo(proc.tunnel_id, { resumedAt: proc.resumed_at });
           }
         } else {
           // El proceso ya existe, solo actualizar rangos si cambiaron
@@ -61,16 +70,35 @@ export function useProcessSync(intervalMs = 5000) {
             processStore.updateRanges(proc.tunnel_id, ranges);
           }
           
-          // Sincronizar estado paused/running
+          // Sincronizar estado paused/running y timestamps
           if (proc.status === "paused" && localProc.status === "running") {
             processStore.pauseProcess(proc.tunnel_id);
+            if (proc.paused_at) {
+              processStore.updateProcessInfo(proc.tunnel_id, { pausedAt: proc.paused_at });
+            }
           } else if (proc.status === "running" && localProc.status === "paused") {
             processStore.resumeProcess(proc.tunnel_id);
+            if (proc.resumed_at) {
+              processStore.updateProcessInfo(proc.tunnel_id, { resumedAt: proc.resumed_at });
+            }
+          }
+          
+          // Actualizar timestamps si cambiaron
+          if (proc.paused_at && localProc.pausedAt !== proc.paused_at) {
+            processStore.updateProcessInfo(proc.tunnel_id, { pausedAt: proc.paused_at });
+          }
+          if (proc.resumed_at && localProc.resumedAt !== proc.resumed_at) {
+            processStore.updateProcessInfo(proc.tunnel_id, { resumedAt: proc.resumed_at });
           }
         }
       } else if (proc.status === "idle" && localProc && localProc.status !== "idle") {
         // El proceso se finalizó en el backend, finalizarlo en el frontend
         processStore.finalizeProcess(proc.tunnel_id, proc.ended_by || "Sistema");
+        
+        // Actualizar timestamp de finalización si existe
+        if (proc.finalized_at) {
+          processStore.updateProcessInfo(proc.tunnel_id, { finalizedAt: proc.finalized_at });
+        }
       }
     });
   }, [processes]);
