@@ -4,6 +4,7 @@ import Modal from "./Modal";
 import Tabs, { type TabItem } from "./Tabs";
 import ChartTab from "./ChartTab";
 import { jsPDF } from "jspdf";
+import { useAuth } from "../context/AuthContext";
 import {
   TUNELES_MOCK,
   RANGOS_POR_FRUTA,
@@ -20,7 +21,7 @@ import {
   pauseProcess,
   resumeProcess,
 } from "../state/processStore";
-import { apiStartProcess, apiFinalizeProcess, type HistoryRow } from "../api/client";
+import { apiStartProcess, apiFinalizeProcess, apiPauseProcess, apiResumeProcess, type HistoryRow } from "../api/client";
 import * as processStore from "../state/processStore";
 import { useHistoryData } from "../hooks/useHistoryData";
 
@@ -67,6 +68,34 @@ function pushHistory(tunnelId: number, item: HistoryItem) {
   const list = loadHistory(tunnelId);
   list.unshift(item); // último primero
   localStorage.setItem(HISTORY_KEY(tunnelId), JSON.stringify(list));
+}
+
+/* ----------------------------------------------------------------
+   Eventos de acciones de proceso — localStorage por túnel
+   (pausas, reanudaciones, finalizaciones con operador y hora)
+------------------------------------------------------------------*/
+type ActionEvent = {
+  id: string;
+  type: "paused" | "resumed" | "finalized";
+  by: string;
+  at: string; // ISO
+  note?: string;
+};
+const EVENTS_KEY = (tunnelId: number) => `apt_events_${tunnelId}`;
+
+function loadEvents(tunnelId: number): ActionEvent[] {
+  try {
+    const raw = localStorage.getItem(EVENTS_KEY(tunnelId));
+    if (!raw) return [];
+    return JSON.parse(raw) as ActionEvent[];
+  } catch {
+    return [];
+  }
+}
+function pushEvent(tunnelId: number, ev: ActionEvent) {
+  const list = loadEvents(tunnelId);
+  list.unshift(ev); // último primero
+  localStorage.setItem(EVENTS_KEY(tunnelId), JSON.stringify(list));
 }
 
 /* ----------------------------------------------------------------
@@ -129,6 +158,32 @@ const finalizeProcessAction = async (tunnelId: number, endedBy: string) => {
 
   } catch (error) {
     console.error('❌ Error finalizando proceso:', error);
+    throw error;
+  }
+};
+
+// Pausar proceso: backend + store local
+const pauseProcessAction = async (tunnelId: number) => {
+  console.log('⏸️ Pausando proceso en backend...', { tunnelId });
+  try {
+    const result = await apiPauseProcess(tunnelId);
+    console.log('✅ Proceso pausado en backend:', result);
+    processStore.pauseProcess(tunnelId);
+  } catch (error) {
+    console.error('❌ Error pausando proceso:', error);
+    throw error;
+  }
+};
+
+// Reanudar proceso: backend + store local
+const resumeProcessAction = async (tunnelId: number) => {
+  console.log('▶️ Reanudando proceso en backend...', { tunnelId });
+  try {
+    const result = await apiResumeProcess(tunnelId);
+    console.log('✅ Proceso reanudado en backend:', result);
+    processStore.resumeProcess(tunnelId);
+  } catch (error) {
+    console.error('❌ Error reanudando proceso:', error);
     throw error;
   }
 };
@@ -294,6 +349,7 @@ function chipBg(status: ReturnType<typeof classifyTemp>) {
    Procesos — iniciar/pausar/continuar/guardar/finalizar + historial
 ------------------------------------------------------------------*/
 function ProcesosPane({ tunnelId }: { tunnelId: number }) {
+  const { user } = useAuth();
   const [formContraido, setFormContraido] = useState(false);
   // const [isChecked, setIsChecked] = useState(false); // No se usa actualmente
 
@@ -348,7 +404,9 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   ) as TunnelProcess; // Aserción de tipo para evitar null
 
   useEffect(() => {
-    if (process.status === "running" || process.status === "paused") {
+    // Mantener formulario contraído solo cuando está en ejecución.
+    // En pausa queremos mostrar los botones completos (incluye "Continuar").
+    if (process.status === "running") {
       setFormContraido(true);
     } else {
       setFormContraido(false);
@@ -369,6 +427,12 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   // historial (finalizados)
   const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory(tunnelId));
   const [showHist, setShowHist] = useState(false);
+  // eventos (pausas/reanudaciones/finalizados)
+  const [events, setEvents] = useState<ActionEvent[]>(() => loadEvents(tunnelId));
+  const [actionBy, setActionBy] = useState<string>(() => (user?.full_name || user?.user_id || process.startedBy || "").trim());
+  // Observaciones para pausa y reanudación
+  const [pauseNote, setPauseNote] = useState<string>("");
+  const [resumeNote, setResumeNote] = useState<string>("");
 
   // sync si cambia el proceso externamente (sin efectos infinitos)
   const prev = useRef(process);
@@ -401,6 +465,10 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
     </span>
   );
 
+  // Últimos eventos de pausa/reanudación para mostrar operador y hora
+  const lastPaused = events.find((ev) => ev.type === "paused");
+  const lastResumed = events.find((ev) => ev.type === "resumed");
+
   return (
     <div className="space-y-4 px-4 pb-4">
       {/* Estado */}
@@ -430,12 +498,18 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
           {process.status === "paused" && process.pausedAt && (
             <Info label="⏸️ Pausado">
               <span className="text-amber-400">{new Date(process.pausedAt).toLocaleString()}</span>
+              {lastPaused?.by && (
+                <span className="ml-2 text-slate-300">por {lastPaused.by}</span>
+              )}
             </Info>
           )}
-          
+
           {process.status === "running" && process.resumedAt && (
             <Info label="▶️ Reanudado">
               <span className="text-green-400">{new Date(process.resumedAt).toLocaleString()}</span>
+              {lastResumed?.by && (
+                <span className="ml-2 text-slate-300">por {lastResumed.by}</span>
+              )}
             </Info>
           )}
           
@@ -596,7 +670,17 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
           </div>
 
           {/* Acciones */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-end">
+            {(process.status === "running" || process.status === "paused" || process.status === "idle") && (
+              <Field label="Operador de acción">
+                <input
+                  value={actionBy}
+                  onChange={(e) => setActionBy(e.target.value)}
+                  placeholder="Nombre del operador"
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                />
+              </Field>
+            )}
             {process.status === "idle" && (
               <button
                 onClick={async () => {
@@ -605,7 +689,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                       fruit,
                       ranges,
                       startedAt,
-                      startedBy: startedBy || "Operador",
+                      startedBy: startedBy || actionBy || "Operador",
                       measurePlan,
                       destination,
                       conditionInitial,
@@ -627,10 +711,36 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 
             {process.status === "running" && (
               <>
+                <Field label="Observación de pausa">
+                  <textarea
+                    value={pauseNote}
+                    onChange={(e) => setPauseNote(e.target.value)}
+                    className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                    placeholder="Motivo o notas de la pausa..."
+                  />
+                </Field>
                 <button
-                  onClick={() => {
-                    pauseProcess(tunnelId);
-                    console.log("✅ Proceso pausado exitosamente");
+                  onClick={async () => {
+                    if (!actionBy.trim()) {
+                      alert("Ingresa el operador que realiza la pausa.");
+                      return;
+                    }
+                    try {
+                      await pauseProcessAction(tunnelId);
+                      const now = new Date().toISOString();
+                      pushEvent(tunnelId, {
+                        id: `${tunnelId}-paused-${now}`,
+                        type: "paused",
+                        by: actionBy.trim(),
+                        at: now,
+                        note: pauseNote || undefined,
+                      });
+                      setEvents(loadEvents(tunnelId));
+                      setPauseNote("");
+                      console.log("✅ Proceso pausado exitosamente");
+                    } catch (error) {
+                      alert("Error al pausar el proceso. Revisa la consola para más detalles.");
+                    }
                   }}
                   className="px-3 py-2 rounded bg-amber-600 hover:bg-amber-500"
                 >
@@ -651,11 +761,37 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 
             {process.status === "paused" && (
               <>
+                <Field label="Observación de reanudación">
+                  <textarea
+                    value={resumeNote}
+                    onChange={(e) => setResumeNote(e.target.value)}
+                    className="w-full h-20 rounded border border-slate-700 bg-slate-900 px-3 py-2"
+                    placeholder="Notas relacionadas con la reanudación..."
+                  />
+                </Field>
                 <button
-                  onClick={() => {
-                    resumeProcess(tunnelId);
-                    console.log("✅ Proceso reanudado exitosamente");
-                    setFormContraido(true);
+                  onClick={async () => {
+                    if (!actionBy.trim()) {
+                      alert("Ingresa el operador que reanuda el proceso.");
+                      return;
+                    }
+                    try {
+                      await resumeProcessAction(tunnelId);
+                      const now = new Date().toISOString();
+                      pushEvent(tunnelId, {
+                        id: `${tunnelId}-resumed-${now}`,
+                        type: "resumed",
+                        by: actionBy.trim(),
+                        at: now,
+                        note: resumeNote || undefined,
+                      });
+                      setEvents(loadEvents(tunnelId));
+                      setResumeNote("");
+                      console.log("✅ Proceso reanudado exitosamente");
+                      setFormContraido(true);
+                    } catch (error) {
+                      alert("Error al reanudar el proceso. Revisa la consola para más detalles.");
+                    }
                   }}
                   className="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500"
                 >
@@ -714,6 +850,15 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 
                       // refresca vista
                       setHistory(loadHistory(tunnelId));
+                      // Registrar evento de finalización
+                      pushEvent(tunnelId, {
+                        id: `${tunnelId}-finalized-${endedAtNow}`,
+                        type: "finalized",
+                        by: endedBy.trim(),
+                        at: endedAtNow,
+                        note: conditionInitial || undefined,
+                      });
+                      setEvents(loadEvents(tunnelId));
                       setEndedBy("");
 
                       console.log("✅ Proceso finalizado exitosamente");
@@ -784,6 +929,38 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                   ))}
                 </tbody>
               </table>
+              {/* Eventos de proceso */}
+              <div className="mt-6">
+                <div className="font-semibold mb-2">Eventos del proceso</div>
+                {events.length === 0 ? (
+                  <div className="text-sm text-slate-300">Sin eventos registrados.</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b border-slate-700">
+                        <th className="py-2">Acción</th>
+                        <th className="py-2">Operador</th>
+                        <th className="py-2">Fecha y hora</th>
+                        <th className="py-2">Nota</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {events.map((ev) => (
+                        <tr key={ev.id} className="border-b border-slate-800">
+                          <td className="py-2">
+                            {ev.type === "paused" && "Pausa"}
+                            {ev.type === "resumed" && "Reanudación"}
+                            {ev.type === "finalized" && "Finalización"}
+                          </td>
+                          <td className="py-2">{ev.by}</td>
+                          <td className="py-2">{new Date(ev.at).toLocaleString()}</td>
+                          <td className="py-2">{ev.note ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           )}
         </Modal>
@@ -800,6 +977,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunnelId: number }) {
   const areaRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [events, setEvents] = useState<ActionEvent[]>(() => loadEvents(tunnelId));
 
   // Exportar a Excel (CSV compatible con Excel)
   function exportExcel() {
@@ -1002,6 +1180,44 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
 
   return (
     <div>
+      {/* Eventos de proceso */}
+      <div className="rounded-xl border border-slate-700/60 p-4 m-4 bg-slate-900/40">
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-semibold text-white">Eventos del proceso</div>
+          <div className="text-xs text-slate-400">Se registran pausas, reanudaciones y finalizaciones</div>
+        </div>
+        {events.length === 0 ? (
+          <div className="text-sm text-slate-300">Sin eventos registrados.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b border-slate-700">
+                  <th className="py-2">Acción</th>
+                  <th className="py-2">Operador</th>
+                  <th className="py-2">Fecha y hora</th>
+                  <th className="py-2">Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map(ev => (
+                  <tr key={ev.id} className="border-b border-slate-800">
+                    <td className="py-2">
+                      {ev.type === "paused" && "Pausa"}
+                      {ev.type === "resumed" && "Reanudación"}
+                      {ev.type === "finalized" && "Finalización"}
+                    </td>
+                    <td className="py-2">{ev.by}</td>
+                    <td className="py-2">{new Date(ev.at).toLocaleString()}</td>
+                    <td className="py-2">{ev.note ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-between mb-4">
         <div className="font-semibold text-white px-4 pb-4">Últimas mediciones</div>
         <div className="flex items-center gap-2 m-4">

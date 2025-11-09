@@ -130,14 +130,16 @@ export function updateProcessInfo(
 export function pauseProcess(tunnelId: number) {
   const p = getProcess(tunnelId);
   if (!p || p.status !== "running") return;
-  state.byId.set(tunnelId, { ...p, status: "paused", lastChangeAt: new Date().toISOString() });
+  const now = new Date().toISOString();
+  state.byId.set(tunnelId, { ...p, status: "paused", pausedAt: now, lastChangeAt: now });
   emit();
 }
 
 export function resumeProcess(tunnelId: number) {
   const p = getProcess(tunnelId);
   if (!p || p.status !== "paused") return;
-  state.byId.set(tunnelId, { ...p, status: "running", lastChangeAt: new Date().toISOString() });
+  const now = new Date().toISOString();
+  state.byId.set(tunnelId, { ...p, status: "running", resumedAt: now, lastChangeAt: now });
   emit();
 }
 
