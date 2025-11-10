@@ -52,6 +52,9 @@ type HistoryItem = {
   fruit: Fruit;
   ranges: Range;
   endedBy: string;
+  // Datos persistidos del proceso específico
+  measurements?: HistoryRow[];
+  events?: ActionEvent[];
 };
 const HISTORY_KEY = (tunnelId: number) => `apt_history_${tunnelId}`;
 
@@ -212,17 +215,42 @@ export default function TunnelDetail({
   const { data: historico = [], loading: histLoading, error: histError } =
     useHistoryData(tunnelId, 240, 20_000); // 4 horas de datos
 
+  // Filtrar histórico al proceso activo (solo lecturas desde startedAt)
+  const historicoProceso: HistoryRow[] = (() => {
+    const startMs = process.startedAt ? new Date(process.startedAt).getTime() : NaN;
+    if (!Number.isFinite(startMs)) return [];
+    return historico.filter((row) => {
+      const ts = new Date(row.ts).getTime();
+      return Number.isFinite(ts) && ts >= startMs;
+    });
+  })();
+
   const tabs: TabItem[] = [
-    { key: "temperaturas", label: "Temperaturas", content: <ResumenTemperaturas tunnelId={tunnelId} historico={historico} /> },
+    {
+      key: "temperaturas",
+      label: "Temperaturas",
+      content:
+        process.status === "idle" || process.status === "finished"
+          ? <div className="text-slate-300 text-sm p-2">Sin proceso activo — no se muestran temperaturas.</div>
+          : <ResumenTemperaturas tunnelId={tunnelId} historico={historicoProceso} />
+    },
     {
       key: "grafico", label: "Gráfico", content: histLoading
         ? <div className="text-slate-400 text-sm p-2">Cargando…</div>
         : histError
           ? <div className="text-rose-400 text-sm p-2">Error: {histError.message}</div>
-          : <ChartTab historico={historico} />
+          : (process.status === "idle" || process.status === "finished")
+            ? <div className="text-slate-300 text-sm p-2">Sin proceso activo — no se muestran temperaturas ni gráfico.</div>
+            : <ChartTab historico={historicoProceso} />
     },
     { key: "procesos", label: "Procesos", content: <ProcesosPane tunnelId={tunnelId} /> },
-    { key: "historico", label: "Histórico", content: <HistoricoTable historico={historico} tunnelId={tunnelId} /> },
+    {
+      key: "historico",
+      label: "Histórico",
+      content: (process.status === "idle" || process.status === "finished")
+        ? <div className="text-slate-300 text-sm p-2">Sin proceso activo — no se muestran temperaturas ni eventos.</div>
+        : <HistoricoTable historico={historicoProceso} tunnelId={tunnelId} />
+    },
   ];
 
   return (
@@ -244,7 +272,7 @@ function ResumenTemperaturas({ tunnelId, historico }: { tunnelId: number; histor
   ) as TunnelProcess; // Aserción de tipo para evitar null
   const ranges = process.ranges;
 
-  // Última muestra del backend (fallback a mock si aún no llega)
+  // Última muestra del backend; si no hay, mostramos vacío para evitar info vieja
   const last = historico.length ? historico[historico.length - 1] : null;
   const sensores = last ? {
     AMB_OUT: last.AMB_OUT,
@@ -253,7 +281,14 @@ function ResumenTemperaturas({ tunnelId, historico }: { tunnelId: number; histor
     PULP_2: last.PULP_2,
     PULP_3: last.PULP_3,
     PULP_4: last.PULP_4,
-  } : TUNELES_MOCK.find(t => t.id === tunnelId)!.sensores;
+  } : {
+    AMB_OUT: "OUT" as const,
+    AMB_RET: "OUT" as const,
+    PULP_1: "OUT" as const,
+    PULP_2: "OUT" as const,
+    PULP_3: "OUT" as const,
+    PULP_4: "OUT" as const,
+  };
 
   const nums = Object.values(sensores).filter((v) => typeof v === "number") as number[];
   const min = nums.length ? Math.min(...nums) : NaN;
@@ -265,7 +300,7 @@ function ResumenTemperaturas({ tunnelId, historico }: { tunnelId: number; histor
     return (
       <span className={`inline-flex items-center gap-2 rounded text-xs px-3 py-1 text-white ${cls}`}>
         {label && <span className="text-[10px] opacity-85">{label}</span>}
-        <span>{typeof value === "number" ? `${value}°C` : "OUT"}</span>
+        <span>{typeof value === "number" ? `${value}°C` : "—"}</span>
       </span>
     );
   };
@@ -415,7 +450,13 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   // formularios
   const [fruit, setFruit] = useState<Fruit>(process.fruit);
   const [ranges, setRanges] = useState<Range>(process.ranges);
-  const [startedAt, setStartedAt] = useState<string>(process.startedAt ?? new Date().toISOString().slice(0, 16));
+  const initialStartedAt = (() => {
+    const d = new Date();
+    const pad = (n: number) => `${n}`.padStart(2, "0");
+    const localStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return fromLocalInputValue(localStr);
+  })();
+  const [startedAt, setStartedAt] = useState<string>(process.startedAt ?? initialStartedAt);
   const [measurePlan, setMeasurePlan] = useState<MeasurePlan>(process.measurePlan ?? 15);
   const [destination, setDestination] = useState(process.destination ?? "");
   const [startedBy, setStartedBy] = useState(process.startedBy ?? "");
@@ -427,6 +468,8 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   // historial (finalizados)
   const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory(tunnelId));
   const [showHist, setShowHist] = useState(false);
+  const [selectedHist, setSelectedHist] = useState<HistoryItem | null>(null);
+  const [showHistDetail, setShowHistDetail] = useState(false);
   // eventos (pausas/reanudaciones/finalizados)
   const [events, setEvents] = useState<ActionEvent[]>(() => loadEvents(tunnelId));
   const [actionBy, setActionBy] = useState<string>(() => (user?.full_name || user?.user_id || process.startedBy || "").trim());
@@ -468,6 +511,55 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
   // Últimos eventos de pausa/reanudación para mostrar operador y hora
   const lastPaused = events.find((ev) => ev.type === "paused");
   const lastResumed = events.find((ev) => ev.type === "resumed");
+
+  // Datos históricos amplios para visualizar detalle de procesos finalizados (hasta 24h)
+  const { data: historicoAll = [], loading: historicoAllLoading, error: historicoAllError } = useHistoryData(tunnelId, 1440, 20_000);
+
+  // Cuando se abre el modal de historial, seleccionar el último proceso por defecto
+  useEffect(() => {
+    if (showHist) {
+      setSelectedHist(history[0] ?? null);
+    }
+  }, [showHist, history]);
+
+  // Al visualizar detalle de un proceso finalizado, si no tiene mediciones/eventos guardados,
+  // capturamos un snapshot filtrado y lo persistimos en el historial para que no se actualice.
+  useEffect(() => {
+    if (!showHistDetail || !selectedHist || historicoAllLoading) return;
+    const hasMeasurements = Array.isArray(selectedHist.measurements) && selectedHist.measurements.length > 0;
+    const hasEvents = Array.isArray(selectedHist.events) && selectedHist.events.length > 0;
+    if (hasMeasurements && hasEvents) return;
+
+    const startMs = new Date(selectedHist.startedAt).getTime();
+    const endMs = new Date(selectedHist.endedAt).getTime();
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return;
+
+    const historicoSel = hasMeasurements
+      ? (selectedHist.measurements as HistoryRow[])
+      : historicoAll.filter(row => {
+          const ts = new Date(row.ts).getTime();
+          return Number.isFinite(ts) && ts >= startMs && ts <= endMs;
+        });
+
+    const eventsActuales = loadEvents(tunnelId) || [];
+    const eventsSel = hasEvents
+      ? (selectedHist.events as ActionEvent[])
+      : eventsActuales.filter(ev => {
+          const atMs = new Date(ev.at).getTime();
+          return Number.isFinite(atMs) && atMs >= startMs && atMs <= endMs;
+        });
+
+    const list = loadHistory(tunnelId);
+    const idx = list.findIndex(h => h.id === selectedHist.id);
+    if (idx >= 0) {
+      const updated = { ...list[idx], measurements: historicoSel, events: eventsSel };
+      const newList = [...list];
+      newList[idx] = updated;
+      localStorage.setItem(HISTORY_KEY(tunnelId), JSON.stringify(newList));
+      setHistory(newList);
+      setSelectedHist(updated);
+    }
+  }, [showHistDetail, selectedHist, historicoAllLoading, historicoAll, tunnelId]);
 
   return (
     <div className="space-y-4 px-4 pb-4">
@@ -696,6 +788,7 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                       origin,
                       description: `Proceso iniciado por ${startedBy || "Operador"}`
                     });
+                    // No limpiar eventos anteriores: se conservarán para historial.
                     console.log("✅ Proceso iniciado exitosamente");
                     setFormContraido(true);
                   } catch (error) {
@@ -837,20 +930,8 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                       // Finaliza en el backend y store
                       await finalizeProcessAction(tunnelId, endedBy.trim());
 
-                      // Actualizar historial local
+                      // Registrar evento de finalización primero
                       const endedAtNow = new Date().toISOString();
-                      pushHistory(tunnelId, {
-                        id: `${tunnelId}-${endedAtNow}`,
-                        startedAt: process.startedAt ?? endedAtNow,
-                        endedAt: endedAtNow,
-                        fruit: process.fruit,
-                        ranges: process.ranges,
-                        endedBy: endedBy.trim(),
-                      });
-
-                      // refresca vista
-                      setHistory(loadHistory(tunnelId));
-                      // Registrar evento de finalización
                       pushEvent(tunnelId, {
                         id: `${tunnelId}-finalized-${endedAtNow}`,
                         type: "finalized",
@@ -858,7 +939,35 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                         at: endedAtNow,
                         note: conditionInitial || undefined,
                       });
-                      setEvents(loadEvents(tunnelId));
+                      // Recolectar mediciones del proceso desde la fuente ampliada (hasta 24h)
+                      const startMs = process.startedAt ? new Date(process.startedAt).getTime() : NaN;
+                      const endMs = new Date(endedAtNow).getTime();
+                      const historicoSel = Number.isFinite(startMs)
+                        ? historicoAll.filter(row => {
+                            const ts = new Date(row.ts).getTime();
+                            return Number.isFinite(ts) && ts >= startMs && ts <= endMs;
+                          })
+                        : historicoAll;
+                      // Recolectar eventos del proceso (incluye el de finalización)
+                      const eventsActualizados = loadEvents(tunnelId) || [];
+                      const eventsSel = eventsActualizados.filter(ev => {
+                        const atMs = new Date(ev.at).getTime();
+                        return Number.isFinite(atMs) && atMs >= (Number.isFinite(startMs) ? startMs : 0) && atMs <= endMs;
+                      });
+                      // Actualizar historial local
+                      pushHistory(tunnelId, {
+                        id: `${tunnelId}-${endedAtNow}`,
+                        startedAt: process.startedAt ?? endedAtNow,
+                        endedAt: endedAtNow,
+                        fruit: process.fruit,
+                        ranges: process.ranges,
+                        endedBy: endedBy.trim(),
+                        measurements: historicoSel,
+                        events: eventsSel,
+                      });
+                      // refresca vista de historial y eventos
+                      setHistory(loadHistory(tunnelId));
+                      setEvents(eventsActualizados);
                       setEndedBy("");
 
                       console.log("✅ Proceso finalizado exitosamente");
@@ -886,10 +995,50 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
             Modificar proceso
           </button>
           <button
-            onClick={() => {
-              // puedes reutilizar la lógica del botón de finalizar que ya tienes
+            onClick={async () => {
               const name = prompt("¿Quién finaliza el proceso?");
-              if (name) finalizeProcessAction(tunnelId, name);
+              if (!name) return;
+              try {
+                await finalizeProcessAction(tunnelId, name);
+                const endedAtNow = new Date().toISOString();
+                // Evento de finalización
+                pushEvent(tunnelId, {
+                  id: `${tunnelId}-finalized-${endedAtNow}`,
+                  type: "finalized",
+                  by: name.trim(),
+                  at: endedAtNow,
+                  note: conditionInitial || undefined,
+                });
+                // Mediciones y eventos del proceso
+                const startMs = process.startedAt ? new Date(process.startedAt).getTime() : NaN;
+                const endMs = new Date(endedAtNow).getTime();
+                const historicoSel = Number.isFinite(startMs)
+                  ? historicoAll.filter(row => {
+                      const ts = new Date(row.ts).getTime();
+                      return Number.isFinite(ts) && ts >= startMs && ts <= endMs;
+                    })
+                  : historicoAll;
+                const eventsActualizados = loadEvents(tunnelId) || [];
+                const eventsSel = eventsActualizados.filter(ev => {
+                  const atMs = new Date(ev.at).getTime();
+                  return Number.isFinite(atMs) && atMs >= (Number.isFinite(startMs) ? startMs : 0) && atMs <= endMs;
+                });
+                pushHistory(tunnelId, {
+                  id: `${tunnelId}-${endedAtNow}`,
+                  startedAt: process.startedAt ?? endedAtNow,
+                  endedAt: endedAtNow,
+                  fruit: process.fruit,
+                  ranges: process.ranges,
+                  endedBy: name.trim(),
+                  measurements: historicoSel,
+                  events: eventsSel,
+                });
+                setHistory(loadHistory(tunnelId));
+                setEvents(eventsActualizados);
+              } catch (error) {
+                console.error("❌ Error finalizando proceso:", error);
+                alert("Error al finalizar el proceso. Revisa la consola para más detalles.");
+              }
             }}
             className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500"
           >
@@ -914,55 +1063,118 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
                     <th className="py-2">Rango ideal</th>
                     <th className="py-2">Alarmas</th>
                     <th className="py-2">Finalizado por</th>
+                    <th className="py-2">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.map((h) => (
-                    <tr key={h.id} className="border-b border-slate-800">
+                    <tr
+                      key={h.id}
+                      className={`border-b border-slate-800 cursor-pointer ${selectedHist?.id === h.id ? "bg-slate-800/40" : ""}`}
+                      onClick={() => setSelectedHist(h)}
+                    >
                       <td className="py-2">{new Date(h.startedAt).toLocaleString()}</td>
                       <td className="py-2">{new Date(h.endedAt).toLocaleString()}</td>
                       <td className="py-2">{h.fruit}</td>
                       <td className="py-2">{h.ranges.idealMin}°C – {h.ranges.idealMax}°C</td>
                       <td className="py-2">&lt; {h.ranges.min}°C o &gt; {h.ranges.max}°C</td>
                       <td className="py-2">{h.endedBy}</td>
+                      <td className="py-2">
+                        <button
+                          onClick={() => { setSelectedHist(h); setShowHistDetail(true); }}
+                          className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600"
+                        >Ver detalle</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {/* Eventos de proceso */}
-              <div className="mt-6">
-                <div className="font-semibold mb-2">Eventos del proceso</div>
-                {events.length === 0 ? (
-                  <div className="text-sm text-slate-300">Sin eventos registrados.</div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left border-b border-slate-700">
-                        <th className="py-2">Acción</th>
-                        <th className="py-2">Operador</th>
-                        <th className="py-2">Fecha y hora</th>
-                        <th className="py-2">Nota</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {events.map((ev) => (
-                        <tr key={ev.id} className="border-b border-slate-800">
-                          <td className="py-2">
-                            {ev.type === "paused" && "Pausa"}
-                            {ev.type === "resumed" && "Reanudación"}
-                            {ev.type === "finalized" && "Finalización"}
-                          </td>
-                          <td className="py-2">{ev.by}</td>
-                          <td className="py-2">{new Date(ev.at).toLocaleString()}</td>
-                          <td className="py-2">{ev.note ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+              {/* Los detalles se muestran en un modal separado al hacer "Ver detalle" */}
             </div>
           )}
+        </Modal>
+      )}
+
+      {/* Modal de detalle del proceso seleccionado */}
+      {showHistDetail && selectedHist && (
+        <Modal
+          open={showHistDetail}
+          onClose={() => setShowHistDetail(false)}
+          title={`Proceso finalizado — ${new Date(selectedHist.startedAt).toLocaleString()} → ${new Date(selectedHist.endedAt).toLocaleString()}`}
+          maxWidth="max-w-4xl"
+        >
+          <div className="space-y-6">
+            {/* Resumen del proceso */}
+            <section className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                <div className="text-xs uppercase tracking-wide text-slate-300">Resumen del proceso</div>
+                {(() => {
+                  const start = new Date(selectedHist.startedAt);
+                  const end = new Date(selectedHist.endedAt);
+                  const durMs = end.getTime() - start.getTime();
+                  const h = Math.floor(durMs / 3600000);
+                  const m = Math.floor((durMs % 3600000) / 60000);
+                  const s = Math.floor((durMs % 60000) / 1000);
+                  const durationText = `${h}h ${m}m ${s}s`;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-slate-700 text-slate-200 text-xs">Inicio: {start.toLocaleString()}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-700 text-slate-200 text-xs">Fin: {end.toLocaleString()}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-700 text-slate-200 text-xs">Duración: {durationText}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <Info label="Fruta">{selectedHist.fruit}</Info>
+                <Info label="Rango ideal">{selectedHist.ranges.idealMin}°C – {selectedHist.ranges.idealMax}°C</Info>
+                <Info label="Alarmas">{`< ${selectedHist.ranges.min}°C o > ${selectedHist.ranges.max}°C`}</Info>
+                <Info label="Finalizado por">{selectedHist.endedBy}</Info>
+              </div>
+            </section>
+
+            
+
+            {/* Gráfico y tabla de mediciones del proceso */}
+            <section className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+              <div className="font-semibold mb-3">Mediciones del proceso</div>
+              {historicoAllLoading ? (
+                <div className="text-slate-400 text-sm p-2">Cargando datos históricos…</div>
+              ) : historicoAllError ? (
+                <div className="text-rose-400 text-sm p-2">Error: {historicoAllError.message}</div>
+              ) : (
+                (() => {
+                  const historicoSel = selectedHist.measurements
+                    ? selectedHist.measurements
+                    : (() => {
+                        const startMs = new Date(selectedHist.startedAt).getTime();
+                        const endMs = new Date(selectedHist.endedAt).getTime();
+                        return historicoAll.filter(row => {
+                          const ts = new Date(row.ts).getTime();
+                          return Number.isFinite(ts) && ts >= startMs && ts <= endMs;
+                        });
+                      })();
+                  return (
+                    <div className="space-y-6">
+                      <div className="rounded-md border border-slate-700 bg-slate-900/30 p-2">
+                        <ChartTab historico={historicoSel} />
+                      </div>
+                      <div className="border-t border-slate-700 pt-4">
+                        <HistoricoTable
+                          historico={historicoSel}
+                          tunnelId={tunnelId}
+                          eventsStartAt={selectedHist.startedAt}
+                          eventsEndAt={selectedHist.endedAt}
+                          eventsOverride={selectedHist.events}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </section>
+          </div>
         </Modal>
       )}
     </div>
@@ -974,10 +1186,20 @@ function ProcesosPane({ tunnelId }: { tunnelId: number }) {
 /* ----------------------------------------------------------------
    Histórico de mediciones (tabla + export PDF)
 ------------------------------------------------------------------*/
-function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunnelId: number }) {
+function HistoricoTable({ historico, tunnelId, eventsStartAt, eventsEndAt, eventsOverride }: { historico: HistoryRow[]; tunnelId: number; eventsStartAt?: string; eventsEndAt?: string; eventsOverride?: ActionEvent[] }) {
   const areaRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [events, setEvents] = useState<ActionEvent[]>(() => loadEvents(tunnelId));
+  const events: ActionEvent[] = eventsOverride ?? loadEvents(tunnelId);
+  // Filtrar eventos al proceso actual
+  const proc = (getProcess(tunnelId) || getDefaultProcess(tunnelId)) as TunnelProcess;
+  const startMs = eventsStartAt ? new Date(eventsStartAt).getTime() : (proc.startedAt ? new Date(proc.startedAt).getTime() : NaN);
+  const endMs = eventsEndAt ? new Date(eventsEndAt).getTime() : Infinity;
+  const eventsDelProceso = Number.isFinite(startMs)
+    ? events.filter(ev => {
+        const atMs = new Date(ev.at).getTime();
+        return Number.isFinite(atMs) && atMs >= startMs && atMs <= endMs;
+      })
+    : [];
 
   // Exportar a Excel (CSV compatible con Excel)
   function exportExcel() {
@@ -1178,46 +1400,14 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
     }
   }
 
+  // Construir línea de tiempo combinando mediciones y eventos
+  const timeline: Array<{ kind: 'measure'; ts: string; row: HistoryRow } | { kind: 'event'; ts: string; ev: ActionEvent }> = [
+    ...historico.map(row => ({ kind: 'measure' as const, ts: row.ts, row })),
+    ...eventsDelProceso.map(ev => ({ kind: 'event' as const, ts: ev.at, ev })),
+  ].sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+
   return (
     <div>
-      {/* Eventos de proceso */}
-      <div className="rounded-xl border border-slate-700/60 p-4 m-4 bg-slate-900/40">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-semibold text-white">Eventos del proceso</div>
-          <div className="text-xs text-slate-400">Se registran pausas, reanudaciones y finalizaciones</div>
-        </div>
-        {events.length === 0 ? (
-          <div className="text-sm text-slate-300">Sin eventos registrados.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left border-b border-slate-700">
-                  <th className="py-2">Acción</th>
-                  <th className="py-2">Operador</th>
-                  <th className="py-2">Fecha y hora</th>
-                  <th className="py-2">Nota</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map(ev => (
-                  <tr key={ev.id} className="border-b border-slate-800">
-                    <td className="py-2">
-                      {ev.type === "paused" && "Pausa"}
-                      {ev.type === "resumed" && "Reanudación"}
-                      {ev.type === "finalized" && "Finalización"}
-                    </td>
-                    <td className="py-2">{ev.by}</td>
-                    <td className="py-2">{new Date(ev.at).toLocaleString()}</td>
-                    <td className="py-2">{ev.note ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
       <div className="flex items-center justify-between mb-4">
         <div className="font-semibold text-white px-4 pb-4">Últimas mediciones</div>
         <div className="flex items-center gap-2 m-4">
@@ -1271,26 +1461,79 @@ function HistoricoTable({ historico, tunnelId }: { historico: HistoryRow[]; tunn
               <th className="py-3 px-2 font-semibold text-white bg-green-600/20">IZQ INT ENT</th>
               <th className="py-3 px-2 font-semibold text-white bg-green-600/20">DER INT ENT</th>
               <th className="py-3 px-2 font-semibold text-white bg-green-600/20">DER EXT ENT</th>
-              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> ESTADO </th>
-              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> COND.INI </th>
-              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> COND.FIN </th>
-              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> LECT.MIN </th>
-              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> LECT.MAX </th>
-              <th className="py-3 px-2 font-semibold text-white bg-green-600/20"> OBSERVACION </th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">ESTADO</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">COND.INI</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">OBSERVACION</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">LECT.MIN</th>
+              <th className="py-3 px-2 font-semibold text-white bg-green-600/20">LECT.MAX</th>
             </tr>
           </thead>
           <tbody>
-            {historico.map((row, index) => (
-              <tr key={row.ts} className={`border-b border-slate-700 ${index % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-900/20'}`}>
-                <td className="py-2 px-2 text-slate-200">{new Date(row.ts).toLocaleString()}</td>
-                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.AMB_OUT)}</td>
-                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.AMB_RET)}</td>
-                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.IZQ_EXT_ENT ?? row.PULP_3)}</td>
-                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.IZQ_INT_ENT ?? row.PULP_2)}</td>
-                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.DER_INT_ENT ?? row.PULP_1)}</td>
-                <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.DER_EXT_ENT ?? row.PULP_4)}</td>
-              </tr>
-            ))}
+            {timeline.map((item, index) => {
+              if (item.kind === 'measure') {
+                const row = item.row;
+                const sensors = [
+                  row.AMB_OUT,
+                  row.AMB_RET,
+                  row.IZQ_EXT_ENT ?? row.PULP_3,
+                  row.IZQ_INT_ENT ?? row.PULP_2,
+                  row.DER_INT_ENT ?? row.PULP_1,
+                  row.DER_EXT_ENT ?? row.PULP_4,
+                ];
+                const nums = sensors.filter((v) => v !== "OUT" && typeof v === "number") as number[];
+                const lectMin = nums.length ? Math.min(...nums) : NaN;
+                const lectMax = nums.length ? Math.max(...nums) : NaN;
+                const statusList = nums.map((v) => classifyTemp(v, proc.ranges));
+                const statusOverall = statusList.length === 0
+                  ? "OUT"
+                  : (statusList.includes("ALARM_BAJA")
+                      ? "ALARM_BAJA"
+                      : (statusList.includes("ALARM_ALTA")
+                          ? "ALARM_ALTA"
+                          : (statusList.every((s) => s === "OK") ? "OK" : "FUERA_IDEAL")));
+                const statusLabel = statusOverall === "ALARM_BAJA"
+                  ? "ALARM BAJA"
+                  : statusOverall === "ALARM_ALTA"
+                  ? "ALARM ALTA"
+                  : statusOverall === "FUERA_IDEAL"
+                  ? "FUERA IDEAL"
+                  : statusOverall;
+                return (
+                  <tr key={`m-${row.ts}`} className={`border-b border-slate-700 ${index % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-900/20'}`}>
+                    <td className="py-2 px-2 text-slate-200">{new Date(row.ts).toLocaleString()}</td>
+                    <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.AMB_OUT)}</td>
+                    <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.AMB_RET)}</td>
+                    <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.IZQ_EXT_ENT ?? row.PULP_3)}</td>
+                    <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.IZQ_INT_ENT ?? row.PULP_2)}</td>
+                    <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.DER_INT_ENT ?? row.PULP_1)}</td>
+                    <td className="py-2 px-2 text-green-200 font-mono">{fmt(row.DER_EXT_ENT ?? row.PULP_4)}</td>
+                    <td className="py-2 px-2">
+                      <span className={`text-xs px-2 py-1 rounded-full text-white ${chipBg(statusOverall)}`}>{statusLabel}</span>
+                    </td>
+                    <td className="py-2 px-2 text-slate-200">{proc.conditionInitial ?? '—'}</td>
+                    <td className="py-2 px-2 text-slate-200">—</td>
+                    <td className="py-2 px-2 text-green-200 font-mono">{Number.isNaN(lectMin) ? '—' : `${lectMin}°C`}</td>
+                    <td className="py-2 px-2 text-green-200 font-mono">{Number.isNaN(lectMax) ? '—' : `${lectMax}°C`}</td>
+                  </tr>
+                );
+              }
+              const ev = item.ev;
+              const label = ev.type === 'paused' ? 'Pausa' : ev.type === 'resumed' ? 'Reanudación' : 'Finalización';
+              const color = ev.type === 'paused' ? 'bg-amber-600/20 text-amber-300 border-amber-600/40' : ev.type === 'resumed' ? 'bg-sky-600/20 text-sky-300 border-sky-600/40' : 'bg-rose-600/20 text-rose-300 border-rose-600/40';
+              return (
+                <tr key={`e-${ev.id}`} className={`border-b border-slate-700 ${index % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-900/20'}`}>
+                  <td className="py-2 px-2 text-slate-200">{new Date(ev.at).toLocaleString()}</td>
+                  <td className="py-2 px-2" colSpan={11}>
+                    <div className={`flex items-center gap-2 rounded border ${color} px-2 py-1`}> 
+                      <span className="text-xs uppercase tracking-wide">Evento:</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-200">{label}</span>
+                      <span className="text-xs text-slate-300">Operador: {ev.by}</span>
+                      <span className="text-xs text-slate-300">Nota: {ev.note ?? '—'}</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
