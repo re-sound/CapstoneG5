@@ -1201,33 +1201,93 @@ function HistoricoTable({ historico, tunnelId, eventsStartAt, eventsEndAt, event
       })
     : [];
 
-  // Exportar a Excel (CSV compatible con Excel)
-  function exportExcel() {
+  // Exportar a Excel (XLSX con diseño)
+  async function exportExcel() {
     try {
-      const headers = ['Fecha','AMB OUT','AMB RET','IZQ EXT','IZQ INT','DER INT','DER EXT'];
-      const rows = historico.map(row => [
-        new Date(row.ts).toLocaleString('es-ES'),
-        fmt(row.AMB_OUT),
-        fmt(row.AMB_RET),
-        fmt(row.IZQ_EXT_ENT ?? row.PULP_3),
-        fmt(row.IZQ_INT_ENT ?? row.PULP_2),
-        fmt(row.DER_INT_ENT ?? row.PULP_1),
-        fmt(row.DER_EXT_ENT ?? row.PULP_4)
-      ]);
+      // Importación dinámica de exceljs
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet(`Túnel ${tunnelId}`);
 
-      // Construir CSV (separador coma, escapar comillas)
-      const escape = (v: string) => '"' + (v ?? '').replace(/"/g, '""') + '"';
-      const csv = [headers.map(escape).join(','), ...rows.map(r => r.map(v => escape(String(v))).join(','))].join('\n');
+      // --- Estilos ---
+      const headerFill: any = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E7D32' } }; // Verde
+      const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+      const centerAlign: any = { horizontal: 'center', vertical: 'middle' };
+      const borderStyle: any = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
 
-      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' }); // BOM para Excel
+      // --- Título y Metadata ---
+      worksheet.mergeCells('A1:G1');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = `Reporte de Temperaturas - Túnel ${tunnelId}`;
+      titleCell.font = { bold: true, size: 16, color: { argb: 'FF2E7D32' } };
+      titleCell.alignment = centerAlign;
+
+      worksheet.mergeCells('A2:G2');
+      const dateCell = worksheet.getCell('A2');
+      dateCell.value = `Generado el: ${new Date().toLocaleString('es-ES')}`;
+      dateCell.alignment = centerAlign;
+      dateCell.font = { italic: true, size: 10, color: { argb: 'FF555555' } };
+
+      // Espacio
+      worksheet.addRow([]);
+
+      // --- Encabezados de Tabla ---
+      const headers = ['Fecha', 'AMB OUT', 'AMB RET', 'IZQ EXT', 'IZQ INT', 'DER INT', 'DER EXT'];
+      const headerRow = worksheet.addRow(headers);
+      
+      headerRow.eachCell((cell) => {
+        cell.fill = headerFill;
+        cell.font = headerFont;
+        cell.alignment = centerAlign;
+        cell.border = borderStyle;
+      });
+
+      // --- Datos ---
+      historico.forEach(row => {
+        const rowData = [
+          new Date(row.ts).toLocaleString('es-ES'),
+          typeof row.AMB_OUT === 'number' ? row.AMB_OUT : '',
+          typeof row.AMB_RET === 'number' ? row.AMB_RET : '',
+          typeof (row.IZQ_EXT_ENT ?? row.PULP_3) === 'number' ? (row.IZQ_EXT_ENT ?? row.PULP_3) : '',
+          typeof (row.IZQ_INT_ENT ?? row.PULP_2) === 'number' ? (row.IZQ_INT_ENT ?? row.PULP_2) : '',
+          typeof (row.DER_INT_ENT ?? row.PULP_1) === 'number' ? (row.DER_INT_ENT ?? row.PULP_1) : '',
+          typeof (row.DER_EXT_ENT ?? row.PULP_4) === 'number' ? (row.DER_EXT_ENT ?? row.PULP_4) : ''
+        ];
+        const r = worksheet.addRow(rowData);
+        r.eachCell((cell) => {
+          cell.alignment = centerAlign;
+          cell.border = borderStyle;
+        });
+      });
+
+      // --- Ancho de Columnas ---
+      worksheet.columns = [
+        { width: 22 }, // Fecha
+        { width: 12 }, // AMB OUT
+        { width: 12 }, // AMB RET
+        { width: 12 }, // IZQ EXT
+        { width: 12 }, // IZQ INT
+        { width: 12 }, // DER INT
+        { width: 12 }, // DER EXT
+      ];
+
+      // --- Generar y Descargar ---
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `historico-tunel-${tunnelId}-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `historico-tunel-${tunnelId}-${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
     } catch (e) {
       console.error('Error al exportar Excel:', e);
       alert(`Error al exportar Excel: ${e instanceof Error ? e.message : 'Error desconocido'}`);
